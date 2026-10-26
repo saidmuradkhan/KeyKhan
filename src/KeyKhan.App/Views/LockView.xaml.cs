@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using KeyKhan.App.ViewModels;
@@ -9,10 +10,34 @@ public partial class LockView : UserControl
     public LockView()
     {
         InitializeComponent();
-        Loaded += (_, _) => PasswordInput.Focus();
+        Loaded += OnLoaded;
+        DataContextChanged += (_, e) =>
+        {
+            if (e.OldValue is LockViewModel old) old.PropertyChanged -= OnViewModelPropertyChanged;
+            if (e.NewValue is LockViewModel current) current.PropertyChanged += OnViewModelPropertyChanged;
+        };
     }
 
     private LockViewModel ViewModel => (LockViewModel)DataContext;
+
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (!await ViewModel.TryUnlockWithDeviceAsync())
+        {
+            PasswordInput.Focus();
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(LockViewModel.Mode))
+        {
+            return;
+        }
+        PasswordInput.Clear();
+        ConfirmInput.Clear();
+        Dispatcher.BeginInvoke(() => (ViewModel.IsRecovering ? (Control)RecoveryKeyInput : PasswordInput).Focus());
+    }
 
     private void OnPasswordChanged(object sender, RoutedEventArgs e)
     {

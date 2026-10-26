@@ -28,7 +28,7 @@ internal sealed class AppHost : IDisposable
         _settings = new SettingsStore(AppPaths.SettingsFile);
         ApplyTheme();
 
-        _session = new VaultSession(_settings.Current.VaultPath);
+        _session = new VaultSession(_settings.Current.VaultPath, AppPaths.DeviceKeyFile);
         _clipboard = new ClipboardService(_settings);
         _hotkeys = new HotkeyService();
         _autoLock = new AutoLockService(_session, _settings);
@@ -37,7 +37,7 @@ internal sealed class AppHost : IDisposable
         var dialogs = new DialogService(_mainWindow, _settings, _session, _clipboard, _hotkeys);
         _mainWindow.DataContext = new MainViewModel(
             _session,
-            () => new LockViewModel(_session),
+            () => new LockViewModel(_session, dialogs),
             () => new VaultViewModel(_session, _clipboard, dialogs));
         _mainWindow.Closing += OnMainWindowClosing;
 
@@ -102,7 +102,6 @@ internal sealed class AppHost : IDisposable
     private void OnSettingsChanged()
     {
         ApplyTheme();
-        StartupRegistration.Apply(_settings.Current.StartWithWindows);
         _tray.SetQuickAccessHint(QuickAccessMenuText());
     }
 

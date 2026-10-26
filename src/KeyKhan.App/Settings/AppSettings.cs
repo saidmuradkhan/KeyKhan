@@ -20,7 +20,6 @@ public sealed record AppSettings
     public int ClipboardClearSeconds { get; init; } = 20;
 
     public bool LockOnSessionLock { get; init; } = true;
-    public bool StartWithWindows { get; init; }
     public bool CloseToTray { get; init; } = true;
     public AppTheme Theme { get; init; } = AppTheme.System;
     public string VaultPath { get; init; } = AppPaths.DefaultVaultFile;

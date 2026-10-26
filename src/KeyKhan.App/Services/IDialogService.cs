@@ -16,6 +16,9 @@ public interface IDialogService
 
     void ShowChangeMasterPassword();
 
+    /// <summary>Shows a newly created recovery key until the user confirms it is saved.</summary>
+    void ShowRecoveryKey(string recoveryKey);
+
     bool Confirm(string title, string message);
 
     void ShowMessage(string title, string message);

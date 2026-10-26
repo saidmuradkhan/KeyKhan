@@ -53,6 +53,16 @@ public sealed partial class QuickAccessViewModel : ObservableObject
         Refresh();
     }
 
+    /// <summary>Clears the search and, when this Windows account is remembered, unlocks without a password.</summary>
+    public async Task ActivateAsync()
+    {
+        Reset();
+        if (IsLocked && await _session.TryUnlockWithDeviceAsync())
+        {
+            Reset();
+        }
+    }
+
     public async Task UnlockAsync(SecureString password)
     {
         if (IsBusy || password.Length == 0)

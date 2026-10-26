@@ -52,6 +52,7 @@
                             <RowDefinition />
                             <RowDefinition />
                             <RowDefinition />
+                            <RowDefinition />
                         </Grid.RowDefinitions>
                         <TextBlock VerticalAlignment="Center" Text="Lock when idle" />
                         <ComboBox Grid.Column="1" ItemsSource="{Binding AutoLockChoices}" DisplayMemberPath="Label"
@@ -61,6 +62,13 @@
                                   DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding ClipboardClearSeconds}" />
                         <CheckBox Grid.Row="2" Grid.ColumnSpan="2" Margin="0,12,0,0"
                                   Content="Lock when Windows is locked or goes to sleep" IsChecked="{Binding LockOnSessionLock}" />
+                        <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,12,0,0">
+                            <CheckBox Content="Remember me on this computer" IsChecked="{Binding RememberDevice}"
+                                      IsEnabled="{Binding CanManageVault, Mode=OneWay}" />
+                            <TextBlock Margin="28,2,0,0" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="No master password on this computer: your Windows sign-in unlocks the vault. Anyone who can use your Windows account can open it." />
+                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -98,6 +106,7 @@
                         </Grid>
                         <WrapPanel Margin="0,12,0,0">
                             <Button Margin="0,0,8,8" Content="Change master password…" Command="{Binding ChangeMasterPasswordCommand}" />
+                            <Button Margin="0,0,8,8" Content="New recovery key…" Command="{Binding NewRecoveryKeyCommand}" />
                             <Button Margin="0,0,8,8" Content="Import from CSV…" Command="{Binding ImportCommand}" />
                             <Button Margin="0,0,8,8" Content="Export to CSV…" Command="{Binding ExportCommand}" />
                         </WrapPanel>

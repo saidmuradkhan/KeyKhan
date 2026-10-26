@@ -26,13 +26,13 @@ public partial class QuickAccessWindow : Window
     /// <summary>Raised when the user closes the window on purpose (not when it merely loses focus).</summary>
     public event EventHandler? Dismissed;
 
-    public void ShowOnActiveScreen()
+    public async void ShowOnActiveScreen()
     {
-        _viewModel.Reset();
         PlaceOnScreenUnderCursor();
         Show();
         Activate();
         FocusInput();
+        await _viewModel.ActivateAsync();
     }
 
     public void Dismiss()

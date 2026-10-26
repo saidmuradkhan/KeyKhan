@@ -4,7 +4,7 @@ using KeyKhan.Vault;
 namespace KeyKhan.App.Services;
 
 /// <summary>Owns the currently unlocked vault and notifies the UI about lock state and data changes.</summary>
-public sealed class VaultSession(string path) : IDisposable
+public sealed class VaultSession(string path, string deviceKeyPath) : IDisposable
 {
     public const int MinimumMasterPasswordLength = 8;
 
@@ -14,6 +14,9 @@ public sealed class VaultSession(string path) : IDisposable
     public bool Exists => File.Exists(Path);
     public bool IsUnlocked => _vault is not null;
     public IReadOnlyList<VaultEntry> Entries => _vault?.Entries ?? [];
+
+    /// <summary>Whether this Windows account can unlock the vault without the master password.</summary>
+    public bool RemembersDevice => File.Exists(deviceKeyPath);
 
     public IReadOnlyList<string> Folders => Entries
         .Select(e => e.Folder)
@@ -25,12 +28,53 @@ public sealed class VaultSession(string path) : IDisposable
     public event EventHandler? StateChanged;
     public event EventHandler? EntriesChanged;
 
-    public async Task CreateAsync(SecureString masterPassword) =>
-        SetVault(await Task.Run(() => PasswordVault.Create(Path, masterPassword)));
+    /// <returns>The recovery key, which the user must save.</returns>
+    public async Task<string> CreateAsync(SecureString masterPassword)
+    {
+        string recoveryKey = "";
+        SetVault(await Task.Run(() => PasswordVault.Create(Path, masterPassword, out recoveryKey)));
+        return recoveryKey;
+    }
 
     /// <exception cref="VaultAuthenticationException">Wrong master password.</exception>
     public async Task UnlockAsync(SecureString masterPassword) =>
         SetVault(await Task.Run(() => PasswordVault.Open(Path, masterPassword)));
+
+    /// <exception cref="VaultAuthenticationException">Wrong recovery key.</exception>
+    public async Task RecoverAsync(string recoveryKey, SecureString newMasterPassword) =>
+        SetVault(await Task.Run(() => PasswordVault.Recover(Path, recoveryKey, newMasterPassword)));
+
+    /// <summary>Unlocks with the key remembered for this Windows account, if there is a valid one.</summary>
+    public async Task<bool> TryUnlockWithDeviceAsync()
+    {
+        if (IsUnlocked || !RemembersDevice || !Exists)
+        {
+            return IsUnlocked;
+        }
+
+        try
+        {
+            byte[] deviceKey = await File.ReadAllBytesAsync(deviceKeyPath);
+            SetVault(await Task.Run(() => PasswordVault.OpenWithDeviceKey(Path, deviceKey)));
+            return true;
+        }
+        catch (VaultAuthenticationException)
+        {
+            // Another vault, another account, or a changed file: fall back to the master password.
+            ForgetDevice();
+            return false;
+        }
+    }
+
+    public void RememberDevice()
+    {
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(deviceKeyPath)!);
+        File.WriteAllBytes(deviceKeyPath, RequireVault().CreateDeviceKey());
+    }
+
+    public void ForgetDevice() => File.Delete(deviceKeyPath);
+
+    public string RegenerateRecoveryKey() => RequireVault().RegenerateRecoveryKey();
 
     public void Lock()
     {

@@ -32,6 +32,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _lockOnSessionLock;
 
     [ObservableProperty]
+    private bool _rememberDevice;
+
+    [ObservableProperty]
     private bool _startWithWindows;
 
     [ObservableProperty]
@@ -55,7 +58,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         _autoLockMinutes = current.AutoLockMinutes;
         _clipboardClearSeconds = current.ClipboardClearSeconds;
         _lockOnSessionLock = current.LockOnSessionLock;
-        _startWithWindows = current.StartWithWindows;
+        _rememberDevice = session.RemembersDevice;
+        _startWithWindows = StartupRegistration.IsEnabled;
         _closeToTray = current.CloseToTray;
         _theme = current.Theme;
     }
@@ -102,13 +106,29 @@ public sealed partial class SettingsViewModel : ObservableObject
             return;
         }
 
+        if (StartWithWindows != StartupRegistration.IsEnabled)
+        {
+            StartupRegistration.Apply(StartWithWindows);
+        }
+
+        if (RememberDevice != _session.RemembersDevice && _session.IsUnlocked)
+        {
+            if (RememberDevice)
+            {
+                _session.RememberDevice();
+            }
+            else
+            {
+                _session.ForgetDevice();
+            }
+        }
+
         _settings.Update(s => s with
         {
             QuickAccessHotkey = Hotkey,
             AutoLockMinutes = AutoLockMinutes,
             ClipboardClearSeconds = ClipboardClearSeconds,
             LockOnSessionLock = LockOnSessionLock,
-            StartWithWindows = StartWithWindows,
             CloseToTray = CloseToTray,
             Theme = Theme,
         });
@@ -121,6 +141,15 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [RelayCommand(CanExecute = nameof(CanManageVault))]
     private void ChangeMasterPassword() => _dialogs.ShowChangeMasterPassword();
+
+    [RelayCommand(CanExecute = nameof(CanManageVault))]
+    private void NewRecoveryKey()
+    {
+        if (_dialogs.Confirm("New recovery key", "Create a new recovery key? Your current recovery key will stop working."))
+        {
+            _dialogs.ShowRecoveryKey(_session.RegenerateRecoveryKey());
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanManageVault))]
     private void Import()

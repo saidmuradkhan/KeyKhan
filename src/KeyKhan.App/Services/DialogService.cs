@@ -41,6 +41,9 @@ internal sealed class DialogService(
         }
     }
 
+    public void ShowRecoveryKey(string recoveryKey) =>
+        ShowDialog(new RecoveryKeyWindow(new RecoveryKeyViewModel(recoveryKey, clipboard, this)));
+
     public bool Confirm(string title, string message) =>
         Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
 
