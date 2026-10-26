@@ -25,7 +25,7 @@ if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
     throw '.NET SDK not found. Install it with: winget install Microsoft.DotNet.SDK.10'
 }
 
-$versionArgs = if ($Version) { @("-p:Version=$Version") } else { @() }
+$versionArgs = @(if ($Version) { "-p:Version=$Version" })
 
 if (-not $SkipTests) {
     Invoke-Step 'Test' { dotnet test --project tests/KeyKhan.Vault.Tests -c Release }
