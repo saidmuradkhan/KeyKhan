@@ -54,6 +54,10 @@ internal sealed class VaultHeader
         }
 
         ushort version = BinaryPrimitives.ReadUInt16LittleEndian(data[4..]);
+        if (version == LegacyFormat.Version)
+        {
+            throw new InvalidDataException("This vault was created by KeyKhan 1.0. Unlock it once with your master password to upgrade it.");
+        }
         if (version != CurrentVersion)
         {
             throw new InvalidDataException($"Vault format version {version} is not supported by this version of KeyKhan.");
