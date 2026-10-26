@@ -16,7 +16,7 @@ public enum LockMode
 }
 
 /// <summary>Creates the vault on first run, unlocks it, or resets a forgotten master password with the recovery key.</summary>
-public sealed partial class LockViewModel(VaultSession session, IDialogService dialogs) : ObservableObject
+public sealed partial class LockViewModel(VaultSession session) : ObservableObject
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Subtitle), nameof(SubmitText), nameof(PasswordLabel),
@@ -100,7 +100,7 @@ public sealed partial class LockViewModel(VaultSession session, IDialogService d
             switch (Mode)
             {
                 case LockMode.Create:
-                    dialogs.ShowRecoveryKey(await session.CreateAsync(password));
+                    await session.CreateAsync(password);
                     break;
                 case LockMode.Recover:
                     await session.RecoverAsync(RecoveryKey, password);

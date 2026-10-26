@@ -17,10 +17,11 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly SettingsStore _settings;
     private readonly HotkeyService _hotkeys;
     private readonly VaultSession _session;
+    private readonly UpdateService _updates;
     private readonly IDialogService _dialogs;
 
     [ObservableProperty]
-    private Hotkey _hotkey;
+    private KeyCombo _quickAccessHotkey;
 
     [ObservableProperty]
     private int _autoLockMinutes;
@@ -44,17 +45,26 @@ public sealed partial class SettingsViewModel : ObservableObject
     private AppTheme _theme;
 
     [ObservableProperty]
+    private bool _checkForUpdates;
+
+    [ObservableProperty]
+    private string? _updateStatus;
+
+    [ObservableProperty]
     private string? _error;
 
-    public SettingsViewModel(SettingsStore settings, HotkeyService hotkeys, VaultSession session, IDialogService dialogs)
+    public SettingsViewModel(SettingsStore settings, HotkeyService hotkeys, VaultSession session, UpdateService updates, IDialogService dialogs)
     {
         _settings = settings;
         _hotkeys = hotkeys;
         _session = session;
+        _updates = updates;
         _dialogs = dialogs;
 
         var current = settings.Current;
-        _hotkey = current.QuickAccessHotkey;
+        _quickAccessHotkey = current.QuickAccessHotkey;
+        MainShortcuts = ShortcutItems(ShortcutScope.MainWindow, current);
+        QuickAccessShortcuts = ShortcutItems(ShortcutScope.QuickAccess, current);
         _autoLockMinutes = current.AutoLockMinutes;
         _clipboardClearSeconds = current.ClipboardClearSeconds;
         _lockOnSessionLock = current.LockOnSessionLock;
@@ -62,6 +72,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _startWithWindows = StartupRegistration.IsEnabled;
         _closeToTray = current.CloseToTray;
         _theme = current.Theme;
+        _checkForUpdates = current.CheckForUpdates;
     }
 
     public event EventHandler? CloseRequested;
@@ -83,25 +94,55 @@ public sealed partial class SettingsViewModel : ObservableObject
         new(AppTheme.System, "Use Windows setting"), new(AppTheme.Light, "Light"), new(AppTheme.Dark, "Dark"),
     ];
 
+    public IReadOnlyList<ShortcutItemViewModel> MainShortcuts { get; }
+    public IReadOnlyList<ShortcutItemViewModel> QuickAccessShortcuts { get; }
+
+    public string VersionText => $"KeyKhan {UpdateService.CurrentVersion.ToString(3)}";
+
     public string VaultPath => _session.Path;
     public bool CanManageVault => _session.IsUnlocked;
 
-    /// <summary>The global hotkey must not fire while the user is recording a new one.</summary>
-    public void BeginHotkeyCapture() => _hotkeys.Unregister();
+    /// <summary>
+    /// While the hotkey box has focus every combination goes to it, including ones Windows would act on,
+    /// and the current hotkey is paused so it does not fire.
+    /// </summary>
+    public void BeginHotkeyCapture() => _hotkeys.BeginCapture(combo => QuickAccessHotkey = combo);
 
-    public void EndHotkeyCapture() => _hotkeys.Register(_settings.Current.QuickAccessHotkey);
+    public void EndHotkeyCapture()
+    {
+        _hotkeys.EndCapture();
+        _hotkeys.Register(_settings.Current.QuickAccessHotkey);
+    }
 
-    partial void OnHotkeyChanged(Hotkey value) => Error = null;
+    partial void OnQuickAccessHotkeyChanged(KeyCombo value) => Error = null;
 
     [RelayCommand]
-    private void ResetHotkey() => Hotkey = Hotkey.Default;
+    private void ResetHotkey() => QuickAccessHotkey = KeyCombo.DefaultQuickAccess;
+
+    [RelayCommand]
+    private void ResetShortcuts()
+    {
+        foreach (var item in MainShortcuts.Concat(QuickAccessShortcuts))
+        {
+            item.ResetCommand.Execute(null);
+        }
+    }
 
     [RelayCommand]
     private void Save()
     {
-        if (!_hotkeys.Register(Hotkey))
+        var shortcuts = MainShortcuts.Concat(QuickAccessShortcuts).ToDictionary(i => i.Definition.Action, i => i.Combo);
+        Error = Shortcuts.Validate(shortcuts);
+        if (Error is not null)
         {
-            Error = $"{Hotkey} is already used by Windows or another app. Choose a different shortcut.";
+            return;
+        }
+
+        if (!_hotkeys.Register(QuickAccessHotkey))
+        {
+            Error = QuickAccessHotkey == new KeyCombo(System.Windows.Input.ModifierKeys.Windows, System.Windows.Input.Key.L)
+                ? "Win + L always locks Windows and cannot be used. Choose a different shortcut."
+                : $"{QuickAccessHotkey} is already used by another app. Choose a different shortcut.";
             _hotkeys.Register(_settings.Current.QuickAccessHotkey);
             return;
         }
@@ -125,14 +166,36 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         _settings.Update(s => s with
         {
-            QuickAccessHotkey = Hotkey,
+            QuickAccessHotkey = QuickAccessHotkey,
+            Shortcuts = shortcuts,
             AutoLockMinutes = AutoLockMinutes,
             ClipboardClearSeconds = ClipboardClearSeconds,
             LockOnSessionLock = LockOnSessionLock,
             CloseToTray = CloseToTray,
             Theme = Theme,
+            CheckForUpdates = CheckForUpdates,
         });
         CloseRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static List<ShortcutItemViewModel> ShortcutItems(ShortcutScope scope, AppSettings current) =>
+        Shortcuts.All.Where(d => d.Scope == scope).Select(d => new ShortcutItemViewModel(d, current.Shortcut(d.Action))).ToList();
+
+    [RelayCommand]
+    private async Task CheckForUpdatesNow()
+    {
+        UpdateStatus = "Checking…";
+        try
+        {
+            var release = await _updates.CheckAsync();
+            UpdateStatus = release is null
+                ? "You have the latest version."
+                : $"KeyKhan {release.Version.ToString(3)} is available — use the banner in the main window to install it.";
+        }
+        catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            UpdateStatus = "Could not reach GitHub. Check your internet connection.";
+        }
     }
 
     [RelayCommand]

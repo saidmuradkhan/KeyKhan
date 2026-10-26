@@ -26,6 +26,7 @@ public sealed class TrayIcon : IDisposable
             ContextMenuStrip = menu,
             Visible = true,
         };
+        _icon.BalloonTipClicked += (_, _) => open();
         _icon.MouseClick += (_, e) =>
         {
             if (e.Button == Forms.MouseButtons.Left)
@@ -39,6 +40,9 @@ public sealed class TrayIcon : IDisposable
 
     public void ShowWarning(string title, string text) =>
         _icon.ShowBalloonTip(5000, title, text, Forms.ToolTipIcon.Warning);
+
+    public void ShowInfo(string title, string text) =>
+        _icon.ShowBalloonTip(5000, title, text, Forms.ToolTipIcon.Info);
 
     public void Dispose()
     {

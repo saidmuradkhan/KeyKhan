@@ -8,7 +8,8 @@ using KeyKhan.Vault;
 namespace KeyKhan.App.Services;
 
 internal sealed class DialogService(
-    Window mainWindow, SettingsStore settings, VaultSession session, ClipboardService clipboard, HotkeyService hotkeys)
+    Window mainWindow, SettingsStore settings, VaultSession session, ClipboardService clipboard, HotkeyService hotkeys,
+    UpdateService updates)
     : IDialogService
 {
     private Window? Owner =>
@@ -31,7 +32,7 @@ internal sealed class DialogService(
         ShowDialog(new GeneratorWindow(new GeneratorViewModel(settings, clipboard, isPickMode: false)));
 
     public void ShowSettings() =>
-        ShowDialog(new SettingsWindow(new SettingsViewModel(settings, hotkeys, session, this)));
+        ShowDialog(new SettingsWindow(new SettingsViewModel(settings, hotkeys, session, updates, this)));
 
     public void ShowChangeMasterPassword()
     {
@@ -43,6 +44,12 @@ internal sealed class DialogService(
 
     public void ShowRecoveryKey(string recoveryKey) =>
         ShowDialog(new RecoveryKeyWindow(new RecoveryKeyViewModel(recoveryKey, clipboard, this)));
+
+    public string? Prompt(string title, string label, string initialValue = "")
+    {
+        var window = new PromptWindow(title, label, initialValue);
+        return ShowDialog(window) ? window.Value : null;
+    }
 
     public bool Confirm(string title, string message) =>
         Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;

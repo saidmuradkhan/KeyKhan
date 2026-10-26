@@ -15,6 +15,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KeyKhan.App", "src\KeyKhan.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KeyKhan.Vault.Tests", "tests\KeyKhan.Vault.Tests\KeyKhan.Vault.Tests.csproj", "{E7B9C1D3-5F6A-4E0C-B4D6-7C9E1F3A5B6D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KeyKhan.App.Tests", "tests\KeyKhan.App.Tests\KeyKhan.App.Tests.csproj", "{F2A4B6C8-0D1E-4F3A-9B5C-7D8E9F0A1B3C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -35,6 +37,10 @@ Global
 		{E7B9C1D3-5F6A-4E0C-B4D6-7C9E1F3A5B6D}.Debug|x64.Build.0 = Debug|Any CPU
 		{E7B9C1D3-5F6A-4E0C-B4D6-7C9E1F3A5B6D}.Release|x64.ActiveCfg = Release|Any CPU
 		{E7B9C1D3-5F6A-4E0C-B4D6-7C9E1F3A5B6D}.Release|x64.Build.0 = Release|Any CPU
+		{F2A4B6C8-0D1E-4F3A-9B5C-7D8E9F0A1B3C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F2A4B6C8-0D1E-4F3A-9B5C-7D8E9F0A1B3C}.Debug|x64.Build.0 = Debug|Any CPU
+		{F2A4B6C8-0D1E-4F3A-9B5C-7D8E9F0A1B3C}.Release|x64.ActiveCfg = Release|Any CPU
+		{F2A4B6C8-0D1E-4F3A-9B5C-7D8E9F0A1B3C}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -44,5 +50,6 @@ Global
 		{A3E5C7B9-1D2F-4A6E-8B0C-3F5D7E9A1B2C} = {1F0E2A64-6C59-4D5B-9C37-6A3E0F3B5D10}
 		{C5F7A9B1-3E4D-4C8A-9D2E-5B7F9A1C3D4E} = {1F0E2A64-6C59-4D5B-9C37-6A3E0F3B5D10}
 		{E7B9C1D3-5F6A-4E0C-B4D6-7C9E1F3A5B6D} = {4B7C1D2E-8F3A-4E6B-A1C9-2D5E7F9A0B21}
+		{F2A4B6C8-0D1E-4F3A-9B5C-7D8E9F0A1B3C} = {4B7C1D2E-8F3A-4E6B-A1C9-2D5E7F9A0B21}
 	EndGlobalSection
 EndGlobal

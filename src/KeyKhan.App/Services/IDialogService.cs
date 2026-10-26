@@ -21,6 +21,9 @@ public interface IDialogService
 
     bool Confirm(string title, string message);
 
+    /// <returns>The trimmed, non-empty text, or <c>null</c> if the user cancelled.</returns>
+    string? Prompt(string title, string label, string initialValue = "");
+
     void ShowMessage(string title, string message);
 
     string? PickFileToOpen(string filter);

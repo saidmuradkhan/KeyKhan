@@ -43,7 +43,9 @@ if (-not $Version) {
 }
 
 if (-not $SkipTests) {
-    Invoke-Step 'Test' { dotnet test --project tests/KeyKhan.Vault.Tests -c Release }
+    foreach ($project in Get-ChildItem tests -Filter *.Tests.csproj -Recurse) {
+        Invoke-Step "Test $($project.BaseName)" { dotnet test --project $project.FullName -c Release }
+    }
 }
 
 Invoke-Step "Publish $Version" {

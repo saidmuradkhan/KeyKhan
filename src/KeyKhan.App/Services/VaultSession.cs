@@ -18,23 +18,16 @@ public sealed class VaultSession(string path, string deviceKeyPath) : IDisposabl
     /// <summary>Whether this Windows account can unlock the vault without the master password.</summary>
     public bool RemembersDevice => File.Exists(deviceKeyPath);
 
-    public IReadOnlyList<string> Folders => Entries
-        .Select(e => e.Folder)
-        .Where(f => f.Length > 0)
-        .Distinct(StringComparer.CurrentCultureIgnoreCase)
-        .Order(StringComparer.CurrentCultureIgnoreCase)
-        .ToList();
+    public IReadOnlyList<string> Folders => _vault?.Folders ?? [];
 
     public event EventHandler? StateChanged;
     public event EventHandler? EntriesChanged;
 
-    /// <returns>The recovery key, which the user must save.</returns>
-    public async Task<string> CreateAsync(SecureString masterPassword)
-    {
-        string recoveryKey = "";
-        SetVault(await Task.Run(() => PasswordVault.Create(Path, masterPassword, out recoveryKey)));
-        return recoveryKey;
-    }
+    /// <summary>A new vault, or a 1.0 vault upgraded on unlock, comes with a recovery key the user must save.</summary>
+    public event EventHandler<string>? RecoveryKeyIssued;
+
+    public async Task CreateAsync(SecureString masterPassword) =>
+        SetVault(await Task.Run(() => PasswordVault.Create(Path, masterPassword, out _)));
 
     /// <exception cref="VaultAuthenticationException">Wrong master password.</exception>
     public async Task UnlockAsync(SecureString masterPassword) =>
@@ -95,6 +88,12 @@ public sealed class VaultSession(string path, string deviceKeyPath) : IDisposabl
 
     public void Import(IEnumerable<VaultEntry> entries) => Mutate(v => v.AddRange(entries));
 
+    public void AddFolder(string name) => Mutate(v => v.AddFolder(name));
+
+    public void RenameFolder(string name, string newName) => Mutate(v => v.RenameFolder(name, newName));
+
+    public void DeleteFolder(string name) => Mutate(v => v.DeleteFolder(name));
+
     public Task ChangeMasterPasswordAsync(SecureString current, SecureString next)
     {
         var vault = RequireVault();
@@ -108,6 +107,10 @@ public sealed class VaultSession(string path, string deviceKeyPath) : IDisposabl
         _vault?.Dispose();
         _vault = vault;
         StateChanged?.Invoke(this, EventArgs.Empty);
+        if (vault.NewRecoveryKey is { } recoveryKey)
+        {
+            RecoveryKeyIssued?.Invoke(this, recoveryKey);
+        }
     }
 
     private void Mutate(Action<PasswordVault> change)

@@ -2,7 +2,9 @@ using System.Collections.ObjectModel;
 using System.Security;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Windows.Input;
 using KeyKhan.App.Services;
+using KeyKhan.App.Settings;
 using KeyKhan.Vault;
 using KeyKhan.Vault.Otp;
 
@@ -16,6 +18,7 @@ public sealed partial class QuickAccessViewModel : ObservableObject
     private readonly VaultSession _session;
     private readonly ClipboardService _clipboard;
     private readonly AutoTypeService _autoType;
+    private readonly SettingsStore _settings;
 
     [ObservableProperty]
     private string _query = "";
@@ -32,12 +35,14 @@ public sealed partial class QuickAccessViewModel : ObservableObject
     [ObservableProperty]
     private bool _isBusy;
 
-    public QuickAccessViewModel(VaultSession session, ClipboardService clipboard, AutoTypeService autoType)
+    public QuickAccessViewModel(VaultSession session, ClipboardService clipboard, AutoTypeService autoType, SettingsStore settings)
     {
         _session = session;
         _clipboard = clipboard;
         _autoType = autoType;
+        _settings = settings;
         _session.StateChanged += (_, _) => OnPropertyChanged(nameof(IsLocked));
+        _settings.Changed += (_, _) => OnPropertyChanged(nameof(Hints));
     }
 
     /// <summary>Raised when the window should hide and give focus back to the previous app.</summary>
@@ -45,6 +50,33 @@ public sealed partial class QuickAccessViewModel : ObservableObject
 
     public ObservableCollection<VaultEntry> Results { get; } = [];
     public bool IsLocked => !_session.IsUnlocked;
+
+    public string Hints
+    {
+        get
+        {
+            string Key(ShortcutAction action) => _settings.Current.Shortcut(action).ToString();
+            return string.Join("  ·  ",
+                $"{Key(ShortcutAction.QuickCopyPassword)}  copy password",
+                $"{Key(ShortcutAction.QuickCopyUsername)}  username",
+                $"{Key(ShortcutAction.QuickAutoType)}  auto-type",
+                $"{Key(ShortcutAction.QuickCopyTotp)}  2FA code",
+                $"{Key(ShortcutAction.QuickPrevious)} / {Key(ShortcutAction.QuickNext)}  previous / next",
+                $"{Key(ShortcutAction.QuickClose)}  close");
+        }
+    }
+
+    public IReadOnlyDictionary<ShortcutAction, ICommand> ShortcutCommands => new Dictionary<ShortcutAction, ICommand>
+    {
+        [ShortcutAction.QuickCopyPassword] = CopyPasswordCommand,
+        [ShortcutAction.QuickCopyUsername] = CopyUsernameCommand,
+        [ShortcutAction.QuickAutoType] = AutoTypeCommand,
+        [ShortcutAction.QuickCopyTotp] = CopyTotpCommand,
+        [ShortcutAction.QuickOpenWebsite] = OpenUrlCommand,
+        [ShortcutAction.QuickNext] = SelectNextCommand,
+        [ShortcutAction.QuickPrevious] = SelectPreviousCommand,
+        [ShortcutAction.QuickClose] = DismissCommand,
+    };
 
     public void Reset()
     {

@@ -1,28 +1,36 @@
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using CommunityToolkit.Mvvm.Input;
+using KeyKhan.App.Services;
 using KeyKhan.App.ViewModels;
 
 namespace KeyKhan.App.Views;
 
 public partial class VaultView : UserControl
 {
+    private ShortcutBinder? _shortcuts;
+
     public VaultView()
     {
         InitializeComponent();
-        Loaded += (_, _) => SearchBox.Focus();
+        Loaded += OnLoaded;
+        Unloaded += (_, _) => _shortcuts?.Dispose();
     }
 
     private VaultViewModel ViewModel => (VaultViewModel)DataContext;
 
-    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            SearchBox.Focus();
-            SearchBox.SelectAll();
-            e.Handled = true;
-        }
-        base.OnPreviewKeyDown(e);
+        _shortcuts?.Dispose();
+        _shortcuts = new ShortcutBinder(this, ViewModel.Settings, ViewModel.ShortcutCommands(new RelayCommand(FocusSearch)));
+        SearchBox.Focus();
+    }
+
+    private void FocusSearch()
+    {
+        SearchBox.Focus();
+        SearchBox.SelectAll();
     }
 
     // Arrow keys move through results without leaving the search box; Enter copies the password.

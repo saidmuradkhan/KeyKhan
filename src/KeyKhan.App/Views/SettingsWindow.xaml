@@ -4,14 +4,32 @@
         xmlns:controls="clr-namespace:KeyKhan.App.Controls"
         Title="Settings"
         Width="600" Height="800" MinHeight="420" ShowInTaskbar="False">
+    <Window.Resources>
+        <DataTemplate x:Key="ShortcutRow">
+            <Grid Margin="0,3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="170" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center" Text="{Binding Label}" />
+                <controls:KeyComboBox Grid.Column="1" Combo="{Binding Combo}" />
+                <Button Grid.Column="2" Margin="4,0,0,0" Style="{StaticResource IconButton}" Content="&#xE7A7;"
+                        Command="{Binding ResetCommand}" ToolTip="Reset to default" />
+            </Grid>
+        </DataTemplate>
+    </Window.Resources>
     <DockPanel>
         <Border DockPanel.Dock="Bottom" Padding="24,16"
                 BorderThickness="0,1,0,0" BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}">
-            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
-                <Button MinWidth="96" Content="Cancel" IsCancel="True" />
-                <Button MinWidth="96" Margin="8,0,0,0" Content="Save" IsDefault="True"
-                        Style="{StaticResource AccentButtonStyle}" Command="{Binding SaveCommand}" />
-            </StackPanel>
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button MinWidth="96" Content="Cancel" IsCancel="True" />
+                    <Button MinWidth="96" Margin="8,0,0,0" Content="Save" IsDefault="True"
+                            Style="{StaticResource AccentButtonStyle}" Command="{Binding SaveCommand}" />
+                </StackPanel>
+                <TextBlock Margin="0,0,16,0" VerticalAlignment="Center" Style="{StaticResource ErrorText}" Text="{Binding Error}" />
+            </DockPanel>
         </Border>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -29,15 +47,28 @@
                                 <TextBlock Text="Global shortcut" />
                                 <TextBlock Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Text="Click the box and press a new combination." />
+                                           Text="Click the box and press a new combination. Any Win + key works, except Win + L." />
                             </StackPanel>
-                            <controls:HotkeyBox x:Name="HotkeyInput" Grid.Column="1" Width="170" TextAlignment="Center"
-                                                Hotkey="{Binding Hotkey}"
-                                                GotKeyboardFocus="OnHotkeyFocus" LostKeyboardFocus="OnHotkeyBlur" />
+                            <controls:KeyComboBox Grid.Column="1" Width="170" IsGlobal="True" VerticalAlignment="Center"
+                                                  Combo="{Binding QuickAccessHotkey}"
+                                                  GotKeyboardFocus="OnHotkeyFocus" LostKeyboardFocus="OnHotkeyBlur" />
                             <Button Grid.Column="2" Margin="4,0,0,0" Style="{StaticResource IconButton}" Content="&#xE7A7;"
                                     Command="{Binding ResetHotkeyCommand}" ToolTip="Reset to Win + ~" />
                         </Grid>
-                        <TextBlock Margin="0,8,0,0" Style="{StaticResource ErrorText}" Text="{Binding Error}" />
+                    </StackPanel>
+                </Border>
+
+                <Grid>
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="Keyboard shortcuts" />
+                    <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,6"
+                            Style="{StaticResource LinkButton}" Content="Reset all" Command="{Binding ResetShortcutsCommand}" />
+                </Grid>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="Main window" />
+                        <ItemsControl ItemsSource="{Binding MainShortcuts}" ItemTemplate="{StaticResource ShortcutRow}" Focusable="False" />
+                        <TextBlock Margin="0,16,0,4" Style="{StaticResource FieldLabel}" Text="Quick access (↑ and ↓ always move through results)" />
+                        <ItemsControl ItemsSource="{Binding QuickAccessShortcuts}" ItemTemplate="{StaticResource ShortcutRow}" Focusable="False" />
                     </StackPanel>
                 </Border>
 
@@ -113,6 +144,23 @@
                         <TextBlock Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                    Text="Import understands CSV exports from Chrome, Edge, Firefox, Bitwarden, LastPass, 1Password and KeePass." />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Style="{StaticResource SectionHeader}" Text="Updates" />
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <Grid>
+                            <TextBlock VerticalAlignment="Center" Text="{Binding VersionText}" />
+                            <Button HorizontalAlignment="Right" Content="Check now" Command="{Binding CheckForUpdatesNowCommand}" />
+                        </Grid>
+                        <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding UpdateStatus}"
+                                   Visibility="{Binding UpdateStatus, Converter={StaticResource EmptyToCollapsed}}" />
+                        <CheckBox Margin="0,12,0,0" Content="Check for updates automatically" IsChecked="{Binding CheckForUpdates}" />
+                        <TextBlock Margin="28,2,0,0" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="Asks GitHub for the latest release twice a day. Nothing about you or your vault is sent." />
                     </StackPanel>
                 </Border>
             </StackPanel>

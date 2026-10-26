@@ -109,7 +109,7 @@
     </DataTemplate>
 
     <!-- Implicit styles match the exact type, so subclasses must opt in to the Fluent look. -->
-    <Style TargetType="controls:HotkeyBox" BasedOn="{StaticResource DefaultTextBoxStyle}" />
+    <Style TargetType="controls:KeyComboBox" BasedOn="{StaticResource DefaultTextBoxStyle}" />
 
     <Style TargetType="controls:SecretBox">
         <Setter Property="Focusable" Value="False" />

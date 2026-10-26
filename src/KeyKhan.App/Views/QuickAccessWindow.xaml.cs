@@ -5,6 +5,8 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using KeyKhan.App.Interop;
+using KeyKhan.App.Services;
+using KeyKhan.App.Settings;
 using KeyKhan.App.ViewModels;
 using Forms = System.Windows.Forms;
 
@@ -13,11 +15,15 @@ namespace KeyKhan.App.Views;
 public partial class QuickAccessWindow : Window
 {
     private readonly QuickAccessViewModel _viewModel;
+    private readonly ShortcutBinder _shortcuts;
 
-    public QuickAccessWindow(QuickAccessViewModel viewModel)
+    public QuickAccessWindow(QuickAccessViewModel viewModel, SettingsStore settings)
     {
         InitializeComponent();
         DataContext = _viewModel = viewModel;
+        _shortcuts = new ShortcutBinder(this, settings, viewModel.ShortcutCommands, beforeTextInput: true,
+            new KeyBinding(viewModel.SelectNextCommand, Key.Down, ModifierKeys.None),
+            new KeyBinding(viewModel.SelectPreviousCommand, Key.Up, ModifierKeys.None));
         _viewModel.DismissRequested += (_, _) => Dismiss();
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         SourceInitialized += (_, _) => Dwmapi.UseRoundedCorners(new WindowInteropHelper(this).Handle);

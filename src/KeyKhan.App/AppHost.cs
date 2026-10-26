@@ -17,6 +17,7 @@ internal sealed class AppHost : IDisposable
     private readonly HotkeyService _hotkeys;
     private readonly AutoTypeService _autoType = new();
     private readonly AutoLockService _autoLock;
+    private readonly UpdateService _updates;
     private readonly MainWindow _mainWindow;
     private readonly QuickAccessWindow _quickAccess;
     private readonly TrayIcon _tray;
@@ -32,20 +33,31 @@ internal sealed class AppHost : IDisposable
         _clipboard = new ClipboardService(_settings);
         _hotkeys = new HotkeyService();
         _autoLock = new AutoLockService(_session, _settings);
+        _updates = new UpdateService(_settings);
 
         _mainWindow = new MainWindow();
-        var dialogs = new DialogService(_mainWindow, _settings, _session, _clipboard, _hotkeys);
+        var dialogs = new DialogService(_mainWindow, _settings, _session, _clipboard, _hotkeys, _updates);
         _mainWindow.DataContext = new MainViewModel(
             _session,
-            () => new LockViewModel(_session, dialogs),
-            () => new VaultViewModel(_session, _clipboard, dialogs));
+            _updates,
+            dialogs,
+            Exit,
+            () => new LockViewModel(_session),
+            () => new VaultViewModel(_session, _clipboard, dialogs, _settings));
         _mainWindow.Closing += OnMainWindowClosing;
 
-        _quickAccess = new QuickAccessWindow(new QuickAccessViewModel(_session, _clipboard, _autoType));
+        _quickAccess = new QuickAccessWindow(new QuickAccessViewModel(_session, _clipboard, _autoType, _settings), _settings);
         _quickAccess.Dismissed += (_, _) => _autoType.RestoreTarget();
 
         _tray = new TrayIcon(ShowMainWindow, ToggleQuickAccess, _session.Lock, Exit, QuickAccessMenuText());
         _hotkeys.Pressed += (_, _) => ToggleQuickAccess();
+        _session.RecoveryKeyIssued += (_, recoveryKey) => _app.Dispatcher.BeginInvoke(() =>
+        {
+            ShowMainWindow();
+            dialogs.ShowRecoveryKey(recoveryKey);
+        });
+        _updates.UpdateAvailable += (_, _) => _tray.ShowInfo(
+            "Update available", $"KeyKhan {_updates.Available!.Version.ToString(3)} is ready. Click to open KeyKhan and install it.");
         _settings.Changed += (_, _) => OnSettingsChanged();
     }
 
@@ -61,6 +73,7 @@ internal sealed class AppHost : IDisposable
         {
             ShowMainWindow();
         }
+        _updates.StartAutomaticChecks();
     }
 
     public void ShowMainWindow()
@@ -76,6 +89,7 @@ internal sealed class AppHost : IDisposable
     public void Dispose()
     {
         _tray.Dispose();
+        _updates.Dispose();
         _hotkeys.Dispose();
         _autoLock.Dispose();
         _clipboard.Dispose();

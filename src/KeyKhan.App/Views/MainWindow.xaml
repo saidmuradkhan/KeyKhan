@@ -5,5 +5,24 @@
         Icon="/Resources/keykhan.ico"
         Width="1080" Height="680" MinWidth="780" MinHeight="500"
         WindowStartupLocation="CenterScreen">
-    <ContentControl Content="{Binding Page}" Focusable="False" />
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Margin="12,4,12,8" Padding="16,10" CornerRadius="6"
+                Background="{DynamicResource SystemFillColorAttentionBackgroundBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                Visibility="{Binding Update, Converter={StaticResource EmptyToCollapsed}}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <ProgressBar Width="80" Margin="0,0,12,0" IsIndeterminate="True"
+                                 Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVisible}}" />
+                    <Button Style="{StaticResource AccentButtonStyle}" Content="{Binding UpdateActionText}"
+                            Command="{Binding InstallUpdateCommand}" />
+                    <Button Margin="8,0,0,0" Content="Later" Command="{Binding DismissUpdateCommand}" />
+                </StackPanel>
+                <TextBlock Style="{StaticResource Icon}" FontSize="16" Text="&#xE946;"
+                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding UpdateMessage}" />
+            </DockPanel>
+        </Border>
+        <ContentControl Content="{Binding Page}" Focusable="False" />
+    </DockPanel>
 </Window>

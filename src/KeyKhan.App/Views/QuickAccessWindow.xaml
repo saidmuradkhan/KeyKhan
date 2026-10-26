@@ -6,16 +6,6 @@
         WindowStyle="None" ResizeMode="NoResize"
         ShowInTaskbar="False" Topmost="True"
         WindowStartupLocation="Manual">
-    <Window.InputBindings>
-        <KeyBinding Key="Escape" Command="{Binding DismissCommand}" />
-        <KeyBinding Key="Down" Command="{Binding SelectNextCommand}" />
-        <KeyBinding Key="Up" Command="{Binding SelectPreviousCommand}" />
-        <KeyBinding Key="Enter" Command="{Binding CopyPasswordCommand}" />
-        <KeyBinding Gesture="Shift+Enter" Command="{Binding CopyUsernameCommand}" />
-        <KeyBinding Gesture="Ctrl+Enter" Command="{Binding AutoTypeCommand}" />
-        <KeyBinding Gesture="Ctrl+T" Command="{Binding CopyTotpCommand}" />
-        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenUrlCommand}" />
-    </Window.InputBindings>
 
     <Border BorderThickness="1" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
         <Grid Margin="12">
@@ -88,7 +78,7 @@
 
                 <TextBlock Margin="4,10,4,0" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                           Text="Enter  copy password  ·  Shift+Enter  username  ·  Ctrl+Enter  auto-type  ·  Ctrl+T  2FA code  ·  Esc  close" />
+                           Text="{Binding Hints}" />
             </StackPanel>
         </Grid>
     </Border>

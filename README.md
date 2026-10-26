@@ -10,17 +10,19 @@ The cryptographic core is written in **C++** on top of Windows CNG; the app is *
 
 ## Features
 
-- **Quick access from anywhere** — a global shortcut (default `Win + ~`, configurable) opens a Spotlight-style search over your vault.
-  - `Enter` copy password · `Shift+Enter` copy username · `Ctrl+Enter` auto-type username, Tab, password, Enter into the app you were using · `Ctrl+T` copy 2FA code · `Ctrl+O` open website · `Esc` close
+- **Quick access from anywhere** — a global shortcut (default `Win + ~`) opens a Spotlight-style search over your vault. Any combination works, including `Win` + any key that Windows normally keeps for itself (only `Win + L` is off limits).
+  - `Enter` copy password · `Shift+Enter` copy username · `Ctrl+Enter` auto-type username, Tab, password, Enter into the app you were using · `Ctrl+T` copy 2FA code · `PgUp`/`PgDn` previous/next · `Ctrl+O` open website · `Esc` close
+- **Every shortcut is yours** — change any of them in **Settings → Keyboard shortcuts**.
 - **Safe clipboard** — copied secrets are excluded from Windows clipboard history and cloud clipboard, and are cleared after 20 seconds (configurable).
 - **Built-in authenticator** — store a 2FA setup key or `otpauth://` link and KeyKhan shows the current one-time code (TOTP, SHA-1/256/512).
 - **Password generator** — length, character sets, look-alike exclusion, strength meter.
-- **Folders and favorites**, instant search, letter avatars.
+- **Folders** for projects, clients or anything else — create, rename and delete them in the sidebar, right-click an entry to move it. Plus favorites, instant search and letter avatars.
 - **Recovery key** — forgot the master password? The recovery key you saved when creating the vault lets you set a new one.
 - **Remember me on this computer** (optional) — skip the master password and unlock with your Windows sign-in.
 - **Auto-lock** after inactivity, when Windows locks and before sleep.
 - **Import** CSV exports from Chrome, Edge, Firefox, Bitwarden, LastPass, 1Password and KeePass; **export** to CSV.
 - **Tray app** — starts with Windows (optional), lives in the notification area.
+- **Automatic updates** — KeyKhan tells you when a new version is out and installs it in one click.
 - Light, dark or system theme.
 
 <p>
@@ -40,23 +42,31 @@ On first start KeyKhan asks you to create a master password and shows your **rec
 
 Uninstall from **Settings → Apps → Installed apps**. Your vault in `%APPDATA%\KeyKhan` is kept.
 
+### Updates
+
+KeyKhan checks GitHub for a new release twice a day. When one is out, a bar at the top of the window offers **Install and restart**: the installer is downloaded, checked against the SHA-256 digest GitHub publishes for it, installed silently and KeyKhan reopens. The portable `KeyKhan.exe` opens the download page instead. Turn the check off, or run it by hand, in **Settings → Updates**.
+
+Coming from KeyKhan 1.0? Your vault is upgraded to the new format the first time you unlock it — the original is kept as `vault.keykhan.v1.bak` — and you get a recovery key to save.
+
 ## Keyboard shortcuts
 
-| Main window | |
-| --- | --- |
-| `Ctrl+F` | Search |
-| `Ctrl+N` | New entry |
-| `Ctrl+E` / double-click | Edit entry |
-| `Ctrl+C` / `Enter` in search | Copy password |
-| `Ctrl+B` | Copy username |
-| `Ctrl+T` | Copy 2FA code |
-| `Ctrl+U` | Open website |
-| `Ctrl+D` | Toggle favorite |
-| `Ctrl+G` | Password generator |
-| `Ctrl+L` | Lock |
-| `Del` | Delete entry |
+The defaults are below; all of them can be changed in **Settings → Keyboard shortcuts** (click a box and press the new combination).
 
-Change the global shortcut in **Settings → Quick access**: click the box and press the new combination.
+| Main window | | Quick access | |
+| --- | --- | --- | --- |
+| `Ctrl+F` | Search | `Enter` | Copy password |
+| `Ctrl+N` | New entry | `Shift+Enter` | Copy username |
+| `Ctrl+E` | Edit entry | `Ctrl+Enter` | Auto-type login |
+| `Del` | Delete entry | `Ctrl+T` | Copy 2FA code |
+| `Ctrl+C` | Copy password | `Ctrl+O` | Open website |
+| `Ctrl+B` | Copy username | `PgDn` / `↓` | Next result |
+| `Ctrl+T` | Copy 2FA code | `PgUp` / `↑` | Previous result |
+| `Ctrl+U` | Open website | `Esc` | Close |
+| `Ctrl+D` | Toggle favorite | | |
+| `Ctrl+G` | Password generator | | |
+| `Ctrl+L` | Lock | | |
+
+Why can KeyKhan use `Win + K` and friends? Windows reserves nearly every `Win` combination, so the normal hotkey API refuses them. When that happens KeyKhan watches for the combination with a low-level keyboard hook, which only looks for that one combination and only exists while such a hotkey is set.
 
 ## Build from source
 
@@ -98,13 +108,13 @@ tests/KeyKhan.Vault.Tests
 | Remember me | Optional. The data key is encrypted with Windows DPAPI for your account and stored in `%LOCALAPPDATA%\KeyKhan\device.key`; it is useless on another computer or account |
 | Clipboard | Marked `ExcludeClipboardContentFromMonitorProcessing`, `CanIncludeInClipboardHistory = 0`, `CanUploadToCloudClipboard = 0`; cleared after a timeout |
 
-All cryptography comes from the operating system (Windows CNG / `bcrypt.dll`); there is no custom cipher code. KeyKhan never talks to the network.
+All cryptography comes from the operating system (Windows CNG / `bcrypt.dll`); there is no custom cipher code. The only network request KeyKhan makes is the update check described above, which sends nothing about you or your vault.
 
 **Limitations.** While the vault is unlocked, entries are held in the app's memory as ordinary .NET strings, which the garbage collector may copy and cannot reliably wipe — locking the vault releases them. Anyone with administrator access to your running, unlocked session can read your vault; no password manager can prevent that. Without both the master password and the recovery key the vault cannot be opened — by design, nobody can recover it for you.
 
 ### Vault file and sync
 
-The vault is a single file: `%APPDATA%\KeyKhan\vault.keykhan`. Back it up like any other file. To keep it in a synced folder (OneDrive, Dropbox, …), close KeyKhan and edit `VaultPath` in `%APPDATA%\KeyKhan\settings.json`, then move the file there.
+The vault is a single file: `%APPDATA%\KeyKhan\vault.keykhan`. Back it up like any other file. To keep it in a synced folder (OneDrive, Dropbox, …), close KeyKhan and edit `VaultPath` in `%APPDATA%\KeyKhan\settings.json`, then move the file there. Setting the `KEYKHAN_HOME` environment variable keeps all of KeyKhan's files in that folder instead — handy for a second profile or for development.
 
 File format (little-endian):
 
@@ -114,7 +124,7 @@ File format (little-endian):
 nonce(12) | ciphertext | tag(16)
 ```
 
-The ciphertext is the UTF-8 JSON list of entries.
+The ciphertext is UTF-8 JSON holding the entries and the folder list.
 
 ## Project structure
 
@@ -125,7 +135,8 @@ src/
   KeyKhan.App/      WPF application: MVVM views, global hotkey, tray, clipboard, auto-lock, auto-type
 installer/           Inno Setup script for KeyKhan-Setup.exe
 tests/
-  KeyKhan.Vault.Tests/   xUnit tests, including RFC 6238 TOTP vectors and tamper detection
+  KeyKhan.Vault.Tests/   xUnit tests, including RFC 6238 TOTP vectors, tamper detection and 1.0 upgrades
+  KeyKhan.App.Tests/     shortcut validation and update parsing
 ```
 
 ## License
