@@ -93,8 +93,15 @@
                                   DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding ClipboardClearSeconds}" />
                         <CheckBox Grid.Row="2" Grid.ColumnSpan="2" Margin="0,12,0,0"
                                   Content="Lock when Windows is locked or goes to sleep" IsChecked="{Binding LockOnSessionLock}" />
-                        <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,12,0,0">
-                            <CheckBox Content="Remember me on this computer" IsChecked="{Binding RememberDevice}"
+                        <StackPanel x:Name="RememberDeviceOption" Grid.Row="3" Grid.ColumnSpan="2" Margin="0,12,0,0">
+                            <Border Margin="0,0,0,10" Padding="12,10" CornerRadius="6"
+                                    Background="{DynamicResource SystemFillColorAttentionBackgroundBrush}"
+                                    BorderBrush="{DynamicResource AccentFillColorDefaultBrush}" BorderThickness="1"
+                                    Visibility="{Binding ExplainsRememberDevice, Converter={StaticResource BoolToVisible}}">
+                                <TextBlock TextWrapping="Wrap"
+                                           Text="KeyKhan cannot stay locked while this is on: your Windows sign-in unlocks it again straight away. Turn it off and press Save to lock." />
+                            </Border>
+                            <CheckBox x:Name="RememberDeviceCheckBox" Content="Remember me on this computer" IsChecked="{Binding RememberDevice}"
                                       IsEnabled="{Binding CanManageVault, Mode=OneWay}" />
                             <TextBlock Margin="28,2,0,0" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -160,7 +167,7 @@
                         <CheckBox Margin="0,12,0,0" Content="Check for updates automatically" IsChecked="{Binding CheckForUpdates}" />
                         <TextBlock Margin="28,2,0,0" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                   Text="Asks GitHub for the latest release twice a day. Nothing about you or your vault is sent." />
+                                   Text="Asks GitHub for the latest release every few hours and when you open KeyKhan. Nothing about you or your vault is sent." />
                     </StackPanel>
                 </Border>
             </StackPanel>

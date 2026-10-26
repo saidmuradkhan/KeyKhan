@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace KeyKhan.App;
 
 internal static class AppPaths
@@ -7,6 +10,11 @@ internal static class AppPaths
 
     public static string DataDirectory { get; } =
         Home ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KeyKhan");
+
+    /// <summary>Short stable id of a KEYKHAN_HOME profile; <c>null</c> for the default profile.</summary>
+    public static string? ProfileKey { get; } = Home is null
+        ? null
+        : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(Home).ToUpperInvariant())))[..8];
 
     public static string SettingsFile => Path.Combine(DataDirectory, "settings.json");
 

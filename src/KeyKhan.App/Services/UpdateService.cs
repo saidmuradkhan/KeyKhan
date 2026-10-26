@@ -47,7 +47,10 @@ public sealed class UpdateService : IDisposable
 {
     private const string LatestReleaseUrl = "https://api.github.com/repos/saidmuradkhan/KeyKhan/releases/latest";
     private static readonly TimeSpan FirstCheckDelay = TimeSpan.FromSeconds(20);
-    private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(12);
+    private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(3);
+
+    // Opening the window checks again, but not more often than this (GitHub allows 60 anonymous requests an hour).
+    private static readonly TimeSpan MinimumGap = TimeSpan.FromMinutes(30);
 
     private static readonly string InstallDirectory =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "KeyKhan");
@@ -55,6 +58,7 @@ public sealed class UpdateService : IDisposable
     private readonly SettingsStore _settings;
     private readonly HttpClient _http;
     private readonly DispatcherTimer _timer = new() { Interval = FirstCheckDelay };
+    private DateTime _lastCheck = DateTime.MinValue;
 
     public UpdateService(SettingsStore settings)
     {
@@ -76,10 +80,29 @@ public sealed class UpdateService : IDisposable
 
     public void StartAutomaticChecks() => _timer.Start();
 
+    /// <summary>Checks quietly when automatic checks are on and the last check is not recent; errors are ignored.</summary>
+    public async void CheckIfDue()
+    {
+        if (!_settings.Current.CheckForUpdates || DateTime.UtcNow - _lastCheck < MinimumGap)
+        {
+            return;
+        }
+
+        try
+        {
+            await CheckAsync();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            // Offline or rate-limited: the next interval or window activation tries again.
+        }
+    }
+
     /// <returns>The newer release, or <c>null</c> when this is the latest version.</returns>
     /// <exception cref="HttpRequestException">GitHub could not be reached.</exception>
     public async Task<AppRelease?> CheckAsync()
     {
+        _lastCheck = DateTime.UtcNow;
         var release = AppRelease.Parse(await _http.GetStringAsync(LatestReleaseUrl));
         if (release is null || release.Version <= CurrentVersion)
         {
@@ -126,21 +149,9 @@ public sealed class UpdateService : IDisposable
         _http.Dispose();
     }
 
-    private async void OnTimerTick(object? sender, EventArgs e)
+    private void OnTimerTick(object? sender, EventArgs e)
     {
         _timer.Interval = CheckInterval;
-        if (!_settings.Current.CheckForUpdates)
-        {
-            return;
-        }
-
-        try
-        {
-            await CheckAsync();
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
-        {
-            // Offline or rate-limited: try again at the next interval.
-        }
+        CheckIfDue();
     }
 }

@@ -10,6 +10,14 @@ namespace KeyKhan.App.ViewModels;
 
 public sealed record Choice<T>(T Value, string Label);
 
+public enum SettingsFocus
+{
+    None,
+
+    /// <summary>Opened from Lock while "Remember me" keeps the vault from staying locked.</summary>
+    RememberDevice,
+}
+
 public sealed partial class SettingsViewModel : ObservableObject
 {
     private const string CsvFilter = "CSV files (*.csv)|*.csv";
@@ -53,12 +61,15 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string? _error;
 
-    public SettingsViewModel(SettingsStore settings, HotkeyService hotkeys, VaultSession session, UpdateService updates, IDialogService dialogs)
+    public SettingsViewModel(
+        SettingsStore settings, HotkeyService hotkeys, VaultSession session, UpdateService updates, IDialogService dialogs,
+        SettingsFocus focus = SettingsFocus.None)
     {
         _settings = settings;
         _hotkeys = hotkeys;
         _session = session;
         _updates = updates;
+        Focus = focus;
         _dialogs = dialogs;
 
         var current = settings.Current;
@@ -96,6 +107,9 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public IReadOnlyList<ShortcutItemViewModel> MainShortcuts { get; }
     public IReadOnlyList<ShortcutItemViewModel> QuickAccessShortcuts { get; }
+
+    public SettingsFocus Focus { get; }
+    public bool ExplainsRememberDevice => Focus == SettingsFocus.RememberDevice;
 
     public string VersionText => $"KeyKhan {UpdateService.CurrentVersion.ToString(3)}";
 

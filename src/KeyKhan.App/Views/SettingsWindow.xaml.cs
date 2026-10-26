@@ -14,6 +14,14 @@ public partial class SettingsWindow : Window
         DataContext = _viewModel = viewModel;
         viewModel.CloseRequested += (_, _) => DialogResult = true;
         Closed += (_, _) => viewModel.EndHotkeyCapture();
+        if (viewModel.ExplainsRememberDevice)
+        {
+            Loaded += (_, _) =>
+            {
+                RememberDeviceOption.BringIntoView();
+                RememberDeviceCheckBox.Focus();
+            };
+        }
     }
 
     private void OnHotkeyFocus(object sender, KeyboardFocusChangedEventArgs e) => _viewModel.BeginHotkeyCapture();

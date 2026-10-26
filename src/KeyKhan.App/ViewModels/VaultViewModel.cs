@@ -21,6 +21,7 @@ public sealed partial class VaultViewModel : ObservableObject, IDisposable
     private readonly VaultSession _session;
     private readonly ClipboardService _clipboard;
     private readonly IDialogService _dialogs;
+    private readonly Action _requestLock;
     private readonly DispatcherTimer _clock = new() { Interval = TimeSpan.FromSeconds(1) };
     private DateTime _toastExpiresAt;
 
@@ -52,12 +53,14 @@ public sealed partial class VaultViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string? _toast;
 
-    public VaultViewModel(VaultSession session, ClipboardService clipboard, IDialogService dialogs, SettingsStore settings)
+    public VaultViewModel(
+        VaultSession session, ClipboardService clipboard, IDialogService dialogs, SettingsStore settings, Action requestLock)
     {
         Settings = settings;
         _session = session;
         _clipboard = clipboard;
         _dialogs = dialogs;
+        _requestLock = requestLock;
 
         _session.EntriesChanged += OnEntriesChanged;
         _clock.Tick += OnClockTick;
@@ -204,7 +207,7 @@ public sealed partial class VaultViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private void Lock() => _session.Lock();
+    private void Lock() => _requestLock();
 
     [RelayCommand]
     private void OpenGenerator() => _dialogs.ShowGenerator();

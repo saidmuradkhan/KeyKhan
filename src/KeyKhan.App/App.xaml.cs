@@ -13,7 +13,7 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        _instance = SingleInstance.TryAcquire();
+        _instance = SingleInstance.TryAcquire(AppPaths.ProfileKey);
         if (_instance is null)
         {
             Shutdown();

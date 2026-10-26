@@ -18,7 +18,7 @@ The cryptographic core is written in **C++** on top of Windows CNG; the app is *
 - **Password generator** — length, character sets, look-alike exclusion, strength meter.
 - **Folders** for projects, clients or anything else — create, rename and delete them in the sidebar, then drag an entry onto a folder (or onto Favorites), or use its **⋯** menu → **Add to folder**. Plus favorites, instant search and letter avatars.
 - **Recovery key** — forgot the master password? The recovery key you saved when creating the vault lets you set a new one.
-- **Remember me on this computer** (optional) — skip the master password and unlock with your Windows sign-in.
+- **Remember me on this computer** (optional) — skip the master password and unlock with your Windows sign-in. While it is on, Lock takes you to this setting, since the vault would unlock itself again.
 - **Auto-lock** after inactivity, when Windows locks and before sleep.
 - **Import** CSV exports from Chrome, Edge, Firefox, Bitwarden, LastPass, 1Password and KeePass; **export** to CSV.
 - **Tray app** — starts with Windows (optional), lives in the notification area.
@@ -44,7 +44,7 @@ Uninstall from **Settings → Apps → Installed apps**. Your vault in `%APPDATA
 
 ### Updates
 
-KeyKhan checks GitHub for a new release twice a day. When one is out, a bar at the top of the window offers **Install and restart**: the installer is downloaded, checked against the SHA-256 digest GitHub publishes for it, installed silently and KeyKhan reopens. The portable `KeyKhan.exe` opens the download page instead. Turn the check off, or run it by hand, in **Settings → Updates**.
+KeyKhan checks GitHub for a new release when you open it and every few hours. When one is out, a bar at the top of the window offers **Install and restart**: the installer is downloaded, checked against the SHA-256 digest GitHub publishes for it, installed silently and KeyKhan reopens. The portable `KeyKhan.exe` opens the download page instead. Turn the check off, or run it by hand, in **Settings → Updates**.
 
 Coming from KeyKhan 1.0? Your vault is upgraded to the new format the first time you unlock it — the original is kept as `vault.keykhan.v1.bak` — and you get a recovery key to save.
 

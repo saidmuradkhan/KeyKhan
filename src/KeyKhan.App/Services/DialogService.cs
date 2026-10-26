@@ -31,8 +31,8 @@ internal sealed class DialogService(
     public void ShowGenerator() =>
         ShowDialog(new GeneratorWindow(new GeneratorViewModel(settings, clipboard, isPickMode: false)));
 
-    public void ShowSettings() =>
-        ShowDialog(new SettingsWindow(new SettingsViewModel(settings, hotkeys, session, updates, this)));
+    public void ShowSettings(SettingsFocus focus = SettingsFocus.None) =>
+        ShowDialog(new SettingsWindow(new SettingsViewModel(settings, hotkeys, session, updates, this, focus)));
 
     public void ShowChangeMasterPassword()
     {

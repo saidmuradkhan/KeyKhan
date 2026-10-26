@@ -1,3 +1,4 @@
+using KeyKhan.App.ViewModels;
 using KeyKhan.Vault;
 
 namespace KeyKhan.App.Services;
@@ -12,7 +13,7 @@ public interface IDialogService
 
     void ShowGenerator();
 
-    void ShowSettings();
+    void ShowSettings(SettingsFocus focus = SettingsFocus.None);
 
     void ShowChangeMasterPassword();
 

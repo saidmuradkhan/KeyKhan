@@ -21,6 +21,7 @@ internal sealed class AppHost : IDisposable
     private readonly MainWindow _mainWindow;
     private readonly QuickAccessWindow _quickAccess;
     private readonly TrayIcon _tray;
+    private readonly DialogService _dialogs;
     private bool _exiting;
 
     public AppHost(Application app)
@@ -36,20 +37,21 @@ internal sealed class AppHost : IDisposable
         _updates = new UpdateService(_settings);
 
         _mainWindow = new MainWindow();
-        var dialogs = new DialogService(_mainWindow, _settings, _session, _clipboard, _hotkeys, _updates);
+        var dialogs = _dialogs = new DialogService(_mainWindow, _settings, _session, _clipboard, _hotkeys, _updates);
         _mainWindow.DataContext = new MainViewModel(
             _session,
             _updates,
             dialogs,
             Exit,
             () => new LockViewModel(_session),
-            () => new VaultViewModel(_session, _clipboard, dialogs, _settings));
+            () => new VaultViewModel(_session, _clipboard, dialogs, _settings, RequestLock));
         _mainWindow.Closing += OnMainWindowClosing;
+        _mainWindow.Activated += (_, _) => _updates.CheckIfDue();
 
         _quickAccess = new QuickAccessWindow(new QuickAccessViewModel(_session, _clipboard, _autoType, _settings), _settings);
         _quickAccess.Dismissed += (_, _) => _autoType.RestoreTarget();
 
-        _tray = new TrayIcon(ShowMainWindow, ToggleQuickAccess, _session.Lock, Exit, QuickAccessMenuText());
+        _tray = new TrayIcon(ShowMainWindow, ToggleQuickAccess, RequestLock, Exit, QuickAccessMenuText());
         _hotkeys.Pressed += (_, _) => ToggleQuickAccess();
         _session.RecoveryKeyIssued += (_, recoveryKey) => _app.Dispatcher.BeginInvoke(() =>
         {
@@ -94,6 +96,24 @@ internal sealed class AppHost : IDisposable
         _autoLock.Dispose();
         _clipboard.Dispose();
         _session.Dispose();
+    }
+
+    /// <summary>
+    /// With "Remember me" on, a locked vault unlocks itself again at once, so Lock instead opens that setting;
+    /// turning it off there locks the vault.
+    /// </summary>
+    private void RequestLock()
+    {
+        if (_session.RemembersDevice && _session.IsUnlocked)
+        {
+            ShowMainWindow();
+            _dialogs.ShowSettings(SettingsFocus.RememberDevice);
+            if (_session.RemembersDevice)
+            {
+                return;
+            }
+        }
+        _session.Lock();
     }
 
     private void ToggleQuickAccess()
