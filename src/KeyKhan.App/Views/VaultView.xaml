@@ -16,8 +16,10 @@
                      DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
             <MenuItem Header="Copy password" Command="{Binding CopyPasswordCommand}" />
             <MenuItem Header="Copy username" Command="{Binding CopyUsernameCommand}" />
+            <Separator />
             <MenuItem Header="Edit…" Command="{Binding EditEntryCommand}" />
-            <MenuItem Header="Move to folder" ItemsSource="{Binding MoveTargets}">
+            <MenuItem Header="{Binding FavoriteMenuText}" Command="{Binding ToggleFavoriteCommand}" />
+            <MenuItem Header="Add to folder" ItemsSource="{Binding FolderTargets}">
                 <MenuItem.ItemContainerStyle>
                     <Style TargetType="MenuItem" BasedOn="{StaticResource DefaultMenuItemStyle}">
                         <Setter Property="Header" Value="{Binding Label}" />
@@ -47,7 +49,8 @@
             </StackPanel>
 
             <StackPanel DockPanel.Dock="Bottom">
-                <Button Style="{StaticResource NavButton}" Command="{Binding NewFolderCommand}" AutomationProperties.Name="New folder">
+                <Button Style="{StaticResource NavButton}" Command="{Binding NewFolderCommand}" AutomationProperties.Name="New folder"
+                        AllowDrop="True" DragOver="OnNewFolderDragOver" DragLeave="OnDropTargetLeave" Drop="OnNewFolderDrop">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="&#xE8F4;" />
                         <TextBlock Margin="12,0,0,0" Text="New folder" />
@@ -81,6 +84,10 @@
                     <Style TargetType="ListBoxItem" BasedOn="{StaticResource DefaultListBoxItemStyle}">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                         <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}" />
+                        <Setter Property="AllowDrop" Value="True" />
+                        <EventSetter Event="DragOver" Handler="OnNavigationDragOver" />
+                        <EventSetter Event="DragLeave" Handler="OnDropTargetLeave" />
+                        <EventSetter Event="Drop" Handler="OnNavigationDrop" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding Kind}" Value="Folder">
                                 <Setter Property="ContextMenu" Value="{StaticResource FolderMenu}" />
@@ -134,7 +141,8 @@
                 <ListBox x:Name="EntryList" ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}"
                          Background="Transparent" BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         MouseDoubleClick="OnEntryDoubleClick">
+                         MouseDoubleClick="OnEntryDoubleClick"
+                         PreviewMouseLeftButtonDown="OnEntryMouseDown" PreviewMouseMove="OnEntryMouseMove">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem" BasedOn="{StaticResource DefaultListBoxItemStyle}">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -149,6 +157,7 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource EntryAvatar}" Focusable="False" />
                                 <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
@@ -161,6 +170,24 @@
                                 <TextBlock Grid.Column="2" Style="{StaticResource Icon}" FontSize="12" Text="&#xE735;"
                                            Foreground="{DynamicResource SystemFillColorCautionBrush}"
                                            Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisible}}" />
+                                <!-- Shown on hover or selection; opens the same menu as a right-click. -->
+                                <Button Grid.Column="3" Margin="4,0,0,0" Padding="6" Content="&#xE712;"
+                                        ToolTip="More actions" AutomationProperties.Name="More actions" Click="OnMoreClick"
+                                        Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                            <Setter Property="Visibility" Value="Hidden" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

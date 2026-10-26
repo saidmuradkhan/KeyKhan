@@ -16,7 +16,7 @@ The cryptographic core is written in **C++** on top of Windows CNG; the app is *
 - **Safe clipboard** — copied secrets are excluded from Windows clipboard history and cloud clipboard, and are cleared after 20 seconds (configurable).
 - **Built-in authenticator** — store a 2FA setup key or `otpauth://` link and KeyKhan shows the current one-time code (TOTP, SHA-1/256/512).
 - **Password generator** — length, character sets, look-alike exclusion, strength meter.
-- **Folders** for projects, clients or anything else — create, rename and delete them in the sidebar, right-click an entry to move it. Plus favorites, instant search and letter avatars.
+- **Folders** for projects, clients or anything else — create, rename and delete them in the sidebar, then drag an entry onto a folder (or onto Favorites), or use its **⋯** menu → **Add to folder**. Plus favorites, instant search and letter avatars.
 - **Recovery key** — forgot the master password? The recovery key you saved when creating the vault lets you set a new one.
 - **Remember me on this computer** (optional) — skip the master password and unlock with your Windows sign-in.
 - **Auto-lock** after inactivity, when Windows locks and before sleep.

@@ -31,7 +31,7 @@ public sealed partial class VaultViewModel : ObservableObject, IDisposable
     private string _searchText = "";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSelection), nameof(LastModified))]
+    [NotifyPropertyChangedFor(nameof(HasSelection), nameof(LastModified), nameof(FavoriteMenuText))]
     [NotifyCanExecuteChangedFor(
         nameof(EditEntryCommand), nameof(DeleteEntryCommand), nameof(ToggleFavoriteCommand),
         nameof(CopyUsernameCommand), nameof(CopyPasswordCommand), nameof(CopyTotpCommand), nameof(OpenUrlCommand))]
@@ -69,12 +69,13 @@ public sealed partial class VaultViewModel : ObservableObject, IDisposable
     public ObservableCollection<NavigationItem> Navigation { get; } = [];
     public ObservableCollection<VaultEntry> Entries { get; } = [];
 
-    /// <summary>Choices for the entry's "Move to folder" menu.</summary>
-    public ObservableCollection<MenuTarget> MoveTargets { get; } = [];
+    /// <summary>Choices for the entry's "Add to folder" menu.</summary>
+    public ObservableCollection<MenuTarget> FolderTargets { get; } = [];
 
     public SettingsStore Settings { get; }
 
     public bool HasSelection => SelectedEntry is not null;
+    public string FavoriteMenuText => SelectedEntry?.IsFavorite == true ? "Remove from favorites" : "Add to favorites";
     public string? LastModified => SelectedEntry?.ModifiedAt.LocalDateTime.ToString("g", CultureInfo.CurrentCulture);
     public bool IsVaultEmpty => _session.Entries.Count == 0;
 
@@ -224,22 +225,52 @@ public sealed partial class VaultViewModel : ObservableObject, IDisposable
         ShowToast(seconds > 0 ? $"{what} copied · clears in {seconds}s" : $"{what} copied");
     }
 
-    private void MoveSelectedEntry(string folder)
+    /// <summary>Entries can be dropped on folders (to file them) and on Favorites, but not on All items.</summary>
+    public static bool AcceptsDrop(NavigationItem target) => target.Kind != NavigationKind.All;
+
+    public void DropEntry(Guid id, NavigationItem target)
     {
-        if (SelectedEntry is not { } entry || entry.Folder == folder)
+        if (_session.Find(id) is not { } entry)
+        {
+            return;
+        }
+
+        if (target.Kind == NavigationKind.Folder)
+        {
+            MoveEntry(entry, target.Folder!);
+        }
+        else if (target.Kind == NavigationKind.Favorites && !entry.IsFavorite)
+        {
+            _session.Save(entry with { IsFavorite = true, ModifiedAt = DateTimeOffset.UtcNow });
+            ShowToast($"{entry.Title} added to Favorites");
+        }
+    }
+
+    /// <summary>Asks for a name and files the entry in that new folder.</summary>
+    public void DropEntryOnNewFolder(Guid id)
+    {
+        if (_session.Find(id) is { } entry && _dialogs.Prompt("New folder", "Folder name") is { } name)
+        {
+            MoveEntry(entry, name);
+        }
+    }
+
+    // The current view stays put; an entry filed elsewhere simply leaves this list.
+    private void MoveEntry(VaultEntry entry, string folder)
+    {
+        if (FolderComparer.Equals(entry.Folder, folder))
         {
             return;
         }
         _session.Save(entry with { Folder = folder, ModifiedAt = DateTimeOffset.UtcNow });
-        Select(entry.Id);
-        ShowToast(folder.Length > 0 ? $"Moved to {folder}" : "Removed from its folder");
+        ShowToast(folder.Length > 0 ? $"{entry.Title} added to {folder}" : $"{entry.Title} removed from {entry.Folder}");
     }
 
-    private void MoveSelectedEntryToNewFolder()
+    private void MoveSelectedEntry(string folder)
     {
-        if (_dialogs.Prompt("New folder", "Folder name") is { } name)
+        if (SelectedEntry is { } entry)
         {
-            MoveSelectedEntry(name);
+            MoveEntry(entry, folder);
         }
     }
 
@@ -287,17 +318,23 @@ public sealed partial class VaultViewModel : ObservableObject, IDisposable
         var entries = _session.Entries;
 
         Navigation.Clear();
-        Navigation.Add(new NavigationItem(NavigationKind.All, "All items", "", entries.Count));
-        Navigation.Add(new NavigationItem(NavigationKind.Favorites, "Favorites", "", entries.Count(e => e.IsFavorite)));
-        MoveTargets.Clear();
-        MoveTargets.Add(new MenuTarget("No folder", new RelayCommand(() => MoveSelectedEntry(""))));
+        Navigation.Add(new NavigationItem(NavigationKind.All, "All items", "\uE8F1", entries.Count));
+        Navigation.Add(new NavigationItem(NavigationKind.Favorites, "Favorites", "\uE734", entries.Count(e => e.IsFavorite)));
+        FolderTargets.Clear();
         foreach (string folder in _session.Folders)
         {
             int count = entries.Count(e => FolderComparer.Equals(e.Folder, folder));
-            Navigation.Add(new NavigationItem(NavigationKind.Folder, folder, "", count, folder));
-            MoveTargets.Add(new MenuTarget(folder, new RelayCommand(() => MoveSelectedEntry(folder))));
+            Navigation.Add(new NavigationItem(NavigationKind.Folder, folder, "\uE8B7", count, folder));
+            FolderTargets.Add(new MenuTarget(folder, new RelayCommand(() => MoveSelectedEntry(folder))));
         }
-        MoveTargets.Add(new MenuTarget("New folder…", new RelayCommand(MoveSelectedEntryToNewFolder)));
+        FolderTargets.Add(new MenuTarget("New folder…", new RelayCommand(() =>
+        {
+            if (SelectedEntry is { } entry)
+            {
+                DropEntryOnNewFolder(entry.Id);
+            }
+        })));
+        FolderTargets.Add(new MenuTarget("Remove from folder", new RelayCommand(() => MoveSelectedEntry(""))));
 
         var next = Navigation.FirstOrDefault(n => n.SameTarget(previous)) ?? Navigation[0];
         if (ReferenceEquals(next, SelectedNavigation))
