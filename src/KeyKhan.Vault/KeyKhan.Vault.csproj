@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NativeProject>$(RepoRoot)src\KeyKhan.Native\KeyKhan.Native.vcxproj</NativeProject>
+    <NativeConfiguration Condition="'$(Configuration)' == 'Release'">Release</NativeConfiguration>
+    <NativeConfiguration Condition="'$(Configuration)' != 'Release'">Debug</NativeConfiguration>
+    <NativeLibrary>$(ArtifactsPath)\native\$(NativeConfiguration)\keykhan_native.dll</NativeLibrary>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="KeyKhan.Vault.Tests" />
+    <None Include="$(NativeLibrary)" Link="keykhan_native.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <UpToDateCheckInput Include="$(RepoRoot)src\KeyKhan.Native\**\*.cpp;$(RepoRoot)src\KeyKhan.Native\**\*.h" />
+  </ItemGroup>
+
+  <!--
+    The C++ core is a Visual C++ project, which the .NET SDK cannot build itself.
+    Locate Visual Studio's MSBuild through vswhere so `dotnet build` works from any shell.
+    The solution lists the native project for editing only; this target is what builds it,
+    so Visual Studio never compiles it twice in parallel.
+  -->
+  <Target Name="BuildNativeCore" BeforeTargets="BeforeBuild">
+    <PropertyGroup>
+      <VsWhere>$(MSBuildProgramFiles32)\Microsoft Visual Studio\Installer\vswhere.exe</VsWhere>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(VsWhere)')"
+           Text="Visual Studio (or Build Tools) with the 'Desktop development with C++' workload is required to build the native core." />
+    <Exec Command="&quot;$(VsWhere)&quot; -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find MSBuild\**\Bin\MSBuild.exe"
+          ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_VsMSBuild" />
+    </Exec>
+    <PropertyGroup>
+      <VsMSBuild>%(_VsMSBuild.Identity)</VsMSBuild>
+    </PropertyGroup>
+    <Error Condition="'$(VsMSBuild)' == ''"
+           Text="The 'Desktop development with C++' workload (MSVC x64 tools) was not found in any Visual Studio installation." />
+    <Exec Command="&quot;$(VsMSBuild)&quot; &quot;$(NativeProject)&quot; -p:Configuration=$(NativeConfiguration) -p:Platform=x64 -nologo -v:minimal" />
+  </Target>
+
+</Project>

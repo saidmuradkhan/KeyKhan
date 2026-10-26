@@ -1,0 +1,60 @@
+<Window x:Class="KeyKhan.App.Views.EntryEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:KeyKhan.App.Controls"
+        Title="{Binding WindowTitle}"
+        Width="560" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False">
+    <StackPanel Margin="24">
+        <TextBlock Style="{StaticResource FieldLabel}" Text="Name" />
+        <TextBox x:Name="TitleInput" Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
+
+        <TextBlock Margin="0,12,0,4" Style="{StaticResource FieldLabel}" Text="Username or email" />
+        <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" />
+
+        <TextBlock Margin="0,12,0,4" Style="{StaticResource FieldLabel}" Text="Password" />
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <controls:SecretBox Secret="{Binding Password, UpdateSourceTrigger=PropertyChanged}" />
+            <Button Grid.Column="1" Margin="4,0,0,0" Padding="9" ToolTip="Generate a new password"
+                    Command="{Binding GeneratePasswordCommand}">
+                <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="&#xE72C;" />
+            </Button>
+            <Button Grid.Column="2" Margin="4,0,0,0" Padding="9" ToolTip="Generator options"
+                    Command="{Binding CustomizePasswordCommand}">
+                <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="&#xE9E9;" />
+            </Button>
+        </Grid>
+        <ContentControl Margin="0,8,0,0" Focusable="False"
+                        Content="{Binding Strength}" ContentTemplate="{StaticResource StrengthMeter}" />
+
+        <TextBlock Margin="0,12,0,4" Style="{StaticResource FieldLabel}" Text="Website" />
+        <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" />
+
+        <TextBlock Margin="0,12,0,4" Style="{StaticResource FieldLabel}" Text="Folder" />
+        <ComboBox IsEditable="True" ItemsSource="{Binding Folders}" Text="{Binding Folder, UpdateSourceTrigger=PropertyChanged}" />
+
+        <TextBlock Margin="0,12,0,4" Style="{StaticResource FieldLabel}" Text="2FA secret (optional)" />
+        <TextBox Text="{Binding Totp, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource MonoFont}" />
+        <TextBlock Margin="0,4,0,0" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                   Text="The setup key or otpauth:// link a site shows when you enable two-factor authentication." />
+
+        <TextBlock Margin="0,12,0,4" Style="{StaticResource FieldLabel}" Text="Notes" />
+        <TextBox MinHeight="72" MaxHeight="160" AcceptsReturn="True" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
+
+        <CheckBox Margin="0,12,0,0" Content="Favorite" IsChecked="{Binding IsFavorite}" />
+
+        <TextBlock Margin="0,12,0,0" Style="{StaticResource ErrorText}" Text="{Binding Error}" />
+
+        <StackPanel Margin="0,20,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+            <Button MinWidth="96" Content="Cancel" IsCancel="True" />
+            <Button MinWidth="96" Margin="8,0,0,0" Content="Save" IsDefault="True"
+                    Style="{StaticResource AccentButtonStyle}" Command="{Binding SaveCommand}" />
+        </StackPanel>
+    </StackPanel>
+</Window>

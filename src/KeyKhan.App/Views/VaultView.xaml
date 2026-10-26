@@ -1,0 +1,317 @@
+<UserControl x:Class="KeyKhan.App.Views.VaultView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.InputBindings>
+        <KeyBinding Gesture="Ctrl+N" Command="{Binding NewEntryCommand}" />
+        <KeyBinding Gesture="Ctrl+E" Command="{Binding EditEntryCommand}" />
+        <KeyBinding Gesture="Ctrl+B" Command="{Binding CopyUsernameCommand}" />
+        <KeyBinding Gesture="Ctrl+C" Command="{Binding CopyPasswordCommand}" />
+        <KeyBinding Gesture="Ctrl+T" Command="{Binding CopyTotpCommand}" />
+        <KeyBinding Gesture="Ctrl+U" Command="{Binding OpenUrlCommand}" />
+        <KeyBinding Gesture="Ctrl+D" Command="{Binding ToggleFavoriteCommand}" />
+        <KeyBinding Gesture="Ctrl+G" Command="{Binding OpenGeneratorCommand}" />
+        <KeyBinding Gesture="Ctrl+L" Command="{Binding LockCommand}" />
+        <KeyBinding Key="Delete" Command="{Binding DeleteEntryCommand}" />
+    </UserControl.InputBindings>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220" />
+            <ColumnDefinition Width="320" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <DockPanel Margin="8,12,8,8">
+            <StackPanel DockPanel.Dock="Top" Margin="10,0,0,16" Orientation="Horizontal">
+                <Image Source="/Resources/logo.png" Width="24" Height="24" />
+                <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" Text="KeyKhan"
+                           Style="{StaticResource SubtitleTextBlockStyle}" />
+            </StackPanel>
+
+            <StackPanel DockPanel.Dock="Bottom">
+                <Button Style="{StaticResource NavButton}" Command="{Binding OpenGeneratorCommand}" ToolTip="Ctrl+G"
+                        AutomationProperties.Name="Password generator">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="&#xE8D7;" />
+                        <TextBlock Margin="12,0,0,0" Text="Password generator" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource NavButton}" Command="{Binding OpenSettingsCommand}" AutomationProperties.Name="Settings">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="&#xE713;" />
+                        <TextBlock Margin="12,0,0,0" Text="Settings" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource NavButton}" Command="{Binding LockCommand}" ToolTip="Ctrl+L" AutomationProperties.Name="Lock">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="&#xE72E;" />
+                        <TextBlock Margin="12,0,0,0" Text="Lock" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <ListBox ItemsSource="{Binding Navigation}" SelectedItem="{Binding SelectedNavigation}"
+                     Background="Transparent" BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource DefaultListBoxItemStyle}">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="{Binding Glyph}" />
+                            <TextBlock Grid.Column="1" Margin="12,0,8,0" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="2" Text="{Binding Count}" Style="{StaticResource CaptionTextBlockStyle}"
+                                       VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <!-- Content surface -->
+        <Border Grid.Column="1" Grid.ColumnSpan="2"
+                Background="{DynamicResource LayerFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1,1,0,0" CornerRadius="8,0,0,0" />
+
+        <!-- Entry list -->
+        <DockPanel Grid.Column="1" Margin="12">
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         PreviewKeyDown="OnSearchKeyDown" />
+                <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="Search  (Ctrl+F)"
+                           Visibility="{Binding Text, ElementName=SearchBox, Converter={StaticResource EmptyToVisible}}" />
+                <Button Grid.Column="1" Margin="8,0,0,0" Padding="10,8" ToolTip="New entry (Ctrl+N)" AutomationProperties.Name="New entry"
+                        Style="{StaticResource AccentButtonStyle}" Command="{Binding NewEntryCommand}">
+                    <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="&#xE710;" />
+                </Button>
+            </Grid>
+
+            <Grid>
+                <ListBox x:Name="EntryList" ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}"
+                         Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         MouseDoubleClick="OnEntryDoubleClick">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource DefaultListBoxItemStyle}">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource EntryAvatar}" Focusable="False" />
+                                <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Username}" TextTrimming="CharacterEllipsis"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Visibility="{Binding Username, Converter={StaticResource EmptyToCollapsed}}" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Style="{StaticResource Icon}" FontSize="12" Text="&#xE735;"
+                                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                           Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisible}}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24"
+                            Visibility="{Binding Entries.Count, Converter={StaticResource EmptyToVisible}}">
+                    <TextBlock HorizontalAlignment="Center" Style="{StaticResource Icon}" FontSize="32"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="&#xE721;" />
+                    <TextBlock Margin="0,12,0,0" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="No matching entries." />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsVaultEmpty}" Value="True">
+                                        <Setter Property="Text" Value="Your vault is empty.&#x0a;Press Ctrl+N to add your first login." />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </Grid>
+        </DockPanel>
+
+        <!-- Details -->
+        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto"
+                      Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisible}}">
+            <StackPanel Margin="24,20,24,24">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ContentControl Content="{Binding SelectedEntry}" ContentTemplate="{StaticResource EntryAvatar}"
+                                    Focusable="False" VerticalAlignment="Center">
+                        <ContentControl.LayoutTransform>
+                            <ScaleTransform ScaleX="1.4" ScaleY="1.4" />
+                        </ContentControl.LayoutTransform>
+                    </ContentControl>
+                    <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding SelectedEntry.Title}" Style="{StaticResource SubtitleTextBlockStyle}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding SelectedEntry.Folder}" Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Visibility="{Binding SelectedEntry.Folder, Converter={StaticResource EmptyToCollapsed}}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource IconButton}" Command="{Binding ToggleFavoriteCommand}" ToolTip="Favorite (Ctrl+D)">
+                            <TextBlock>
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Icon}">
+                                        <Setter Property="Text" Value="&#xE734;" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedEntry.IsFavorite}" Value="True">
+                                                <Setter Property="Text" Value="&#xE735;" />
+                                                <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Button>
+                        <Button Style="{StaticResource IconButton}" Command="{Binding EditEntryCommand}" ToolTip="Edit (Ctrl+E)"
+                                Content="&#xE70F;" />
+                        <Button Style="{StaticResource IconButton}" Command="{Binding DeleteEntryCommand}" ToolTip="Delete (Del)"
+                                Content="&#xE74D;" />
+                    </StackPanel>
+                </Grid>
+
+                <Border Margin="0,20,0,0" Style="{StaticResource Card}" Padding="16,8">
+                    <StackPanel>
+                        <!-- Username -->
+                        <Grid Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Username" />
+                                <TextBlock Text="{Binding SelectedEntry.Username}" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE8C8;"
+                                    Command="{Binding CopyUsernameCommand}" ToolTip="Copy username (Ctrl+B)" />
+                        </Grid>
+                        <Separator />
+
+                        <!-- Password -->
+                        <Grid Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Password" />
+                                <TextBlock Text="••••••••••••" Visibility="{Binding IsPasswordRevealed, Converter={StaticResource BoolToCollapsed}}" />
+                                <TextBlock Text="{Binding SelectedEntry.Password}" FontFamily="{StaticResource MonoFont}" TextWrapping="Wrap"
+                                           Visibility="{Binding IsPasswordRevealed, Converter={StaticResource BoolToVisible}}" />
+                            </StackPanel>
+                            <ToggleButton Grid.Column="1" Style="{StaticResource IconToggle}" Content="&#xE7B3;"
+                                          IsChecked="{Binding IsPasswordRevealed}" ToolTip="Show password" />
+                            <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE8C8;"
+                                    Command="{Binding CopyPasswordCommand}" ToolTip="Copy password (Ctrl+C)" />
+                        </Grid>
+
+                        <!-- One-time code -->
+                        <StackPanel Visibility="{Binding TotpCode, Converter={StaticResource EmptyToCollapsed}}">
+                            <Separator />
+                            <Grid Margin="0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="One-time code (2FA)" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding TotpCode}" FontFamily="{StaticResource MonoFont}" FontSize="18" />
+                                        <ProgressBar Width="48" Height="4" Margin="12,0,6,0" VerticalAlignment="Center"
+                                                     Minimum="0" Maximum="{Binding TotpPeriod}" Value="{Binding TotpSecondsRemaining, Mode=OneWay}" />
+                                        <TextBlock VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Text="{Binding TotpSecondsRemaining, StringFormat={}{0}s}" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE8C8;"
+                                        Command="{Binding CopyTotpCommand}" ToolTip="Copy code (Ctrl+T)" />
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- Website -->
+                        <StackPanel Visibility="{Binding SelectedEntry.Url, Converter={StaticResource EmptyToCollapsed}}">
+                            <Separator />
+                            <Grid Margin="0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Website" />
+                                    <TextBlock Text="{Binding SelectedEntry.Url}" TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE8A7;"
+                                        Command="{Binding OpenUrlCommand}" ToolTip="Open in browser (Ctrl+U)" />
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Visibility="{Binding SelectedEntry.Notes, Converter={StaticResource EmptyToCollapsed}}">
+                    <TextBlock Style="{StaticResource SectionHeader}" Text="Notes" />
+                    <Border Style="{StaticResource Card}">
+                        <TextBox Text="{Binding SelectedEntry.Notes, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                                 Background="Transparent" BorderThickness="0" Padding="0" />
+                    </Border>
+                </StackPanel>
+
+                <TextBlock Margin="0,16,0,0" Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                           Text="{Binding LastModified, StringFormat=Last modified {0}}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <TextBlock Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="Select an entry to see its details."
+                   Visibility="{Binding HasSelection, Converter={StaticResource BoolToCollapsed}}" />
+
+        <!-- Toast -->
+        <Border Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,20" Padding="16,10"
+                HorizontalAlignment="Center" VerticalAlignment="Bottom" CornerRadius="6"
+                Background="{DynamicResource SolidBackgroundFillColorTertiaryBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                IsHitTestVisible="False"
+                Visibility="{Binding Toast, Converter={StaticResource EmptyToCollapsed}}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="&#xE73E;"
+                           Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
+                <TextBlock Margin="10,0,0,0" Text="{Binding Toast}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

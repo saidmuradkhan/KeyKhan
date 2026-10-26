@@ -1,0 +1,95 @@
+<Window x:Class="KeyKhan.App.Views.QuickAccessWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="KeyKhan Quick Access"
+        Width="640" SizeToContent="Height"
+        WindowStyle="None" ResizeMode="NoResize"
+        ShowInTaskbar="False" Topmost="True"
+        WindowStartupLocation="Manual">
+    <Window.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding DismissCommand}" />
+        <KeyBinding Key="Down" Command="{Binding SelectNextCommand}" />
+        <KeyBinding Key="Up" Command="{Binding SelectPreviousCommand}" />
+        <KeyBinding Key="Enter" Command="{Binding CopyPasswordCommand}" />
+        <KeyBinding Gesture="Shift+Enter" Command="{Binding CopyUsernameCommand}" />
+        <KeyBinding Gesture="Ctrl+Enter" Command="{Binding AutoTypeCommand}" />
+        <KeyBinding Gesture="Ctrl+T" Command="{Binding CopyTotpCommand}" />
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenUrlCommand}" />
+    </Window.InputBindings>
+
+    <Border BorderThickness="1" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+        <Grid Margin="12">
+            <!-- Locked -->
+            <StackPanel Visibility="{Binding IsLocked, Converter={StaticResource BoolToVisible}}">
+                <StackPanel Orientation="Horizontal" Margin="4,0,0,10">
+                    <Image Source="/Resources/logo.png" Width="20" Height="20" />
+                    <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" Text="KeyKhan is locked"
+                               Style="{StaticResource BodyStrongTextBlockStyle}" />
+                </StackPanel>
+                <PasswordBox x:Name="UnlockInput" FontSize="16" KeyDown="OnUnlockKeyDown" />
+                <TextBlock Margin="4,8,0,0" Style="{StaticResource ErrorText}" Text="{Binding Error}" />
+                <ProgressBar Margin="0,8,0,0" IsIndeterminate="True"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisible}}" />
+                <TextBlock Margin="4,8,0,0" Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                           Text="Enter your master password, then press Enter" />
+            </StackPanel>
+
+            <!-- Search -->
+            <StackPanel Visibility="{Binding IsLocked, Converter={StaticResource BoolToCollapsed}}">
+                <Grid>
+                    <TextBox x:Name="QueryInput" FontSize="18" Padding="40,10,10,10"
+                             Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="14,0,0,0" HorizontalAlignment="Left" Style="{StaticResource Icon}"
+                               IsHitTestVisible="False" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="&#xE721;" />
+                    <TextBlock Margin="42,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" FontSize="18"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="Search your vault"
+                               Visibility="{Binding Text, ElementName=QueryInput, Converter={StaticResource EmptyToVisible}}" />
+                </Grid>
+
+                <ListBox Margin="0,8,0,0" MaxHeight="440" Focusable="False"
+                         ItemsSource="{Binding Results}" SelectedItem="{Binding Selected}"
+                         Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         Visibility="{Binding Results.Count, Converter={StaticResource EmptyToCollapsed}}"
+                         MouseDoubleClick="OnResultDoubleClick">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource DefaultListBoxItemStyle}">
+                            <Setter Property="Focusable" Value="False" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource EntryAvatar}" Focusable="False" />
+                                <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Username}" TextTrimming="CharacterEllipsis"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{Binding Folder}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBlock Margin="4,16,0,8" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="No matching entries."
+                           Visibility="{Binding Results.Count, Converter={StaticResource EmptyToVisible}}" />
+
+                <TextBlock Margin="4,10,4,0" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                           Text="Enter  copy password  ·  Shift+Enter  username  ·  Ctrl+Enter  auto-type  ·  Ctrl+T  2FA code  ·  Esc  close" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
