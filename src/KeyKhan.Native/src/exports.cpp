@@ -3,6 +3,7 @@
 #include "crypto.h"
 #include "totp.h"
 
+#include <algorithm>
 #include <climits>
 #include <new>
 #include <stdexcept>
@@ -80,6 +81,34 @@ const kk_key& require(const kk_key* key) {
     return *key;
 }
 
+// Layout: nonce || ciphertext || tag.
+void seal(std::span<const std::uint8_t> key, std::span<const std::uint8_t> plaintext,
+          std::span<const std::uint8_t> aad, std::span<std::uint8_t> sealed) {
+    if (sealed.size() != plaintext.size() + KK_SEAL_OVERHEAD) {
+        throw std::invalid_argument("output size mismatch");
+    }
+    const auto nonce = sealed.first<KK_NONCE_SIZE>();
+    crypto::random_bytes(nonce);
+    crypto::aes_gcm_encrypt(key, nonce, aad, plaintext, sealed.subspan(KK_NONCE_SIZE, plaintext.size()),
+                            sealed.last<KK_TAG_SIZE>());
+}
+
+void open(std::span<const std::uint8_t> key, std::span<const std::uint8_t> sealed,
+          std::span<const std::uint8_t> aad, std::span<std::uint8_t> plaintext) {
+    if (sealed.size() < KK_SEAL_OVERHEAD || plaintext.size() != sealed.size() - KK_SEAL_OVERHEAD) {
+        throw std::invalid_argument("sealed size mismatch");
+    }
+    crypto::aes_gcm_decrypt(key, sealed.first<KK_NONCE_SIZE>(), aad, sealed.subspan(KK_NONCE_SIZE, plaintext.size()),
+                            sealed.last<KK_TAG_SIZE>(), plaintext);
+}
+
+kk_key* adopt(SecureBuffer material) {
+    if (material.size() != crypto::key_size) {
+        throw std::invalid_argument("invalid key size");
+    }
+    return new kk_key{std::move(material)};
+}
+
 }  // namespace
 
 extern "C" {
@@ -92,8 +121,7 @@ kk_status kk_derive_key(const wchar_t* password, size_t password_length, const u
         }
         *key = nullptr;
         const SecureBuffer utf8 = to_utf8(view(password, password_length));
-        auto material = crypto::pbkdf2_sha256(utf8.span(), view(salt, salt_length), iterations, crypto::key_size);
-        *key = new kk_key{std::move(material)};
+        *key = adopt(crypto::pbkdf2_sha256(utf8.span(), view(salt, salt_length), iterations, crypto::key_size));
     });
 }
 
@@ -101,31 +129,81 @@ void kk_key_free(kk_key* key) {
     delete key;
 }
 
+kk_status kk_key_generate(kk_key** key) {
+    return guarded([&] {
+        if (key == nullptr) {
+            throw std::invalid_argument("null output");
+        }
+        SecureBuffer material(crypto::key_size);
+        crypto::random_bytes(material.span());
+        *key = adopt(std::move(material));
+    });
+}
+
+kk_status kk_key_wrap(const kk_key* wrapping_key, const kk_key* key, const uint8_t* aad, size_t aad_length,
+                      uint8_t* output, size_t output_length) {
+    return guarded([&] {
+        if (output_length != KK_WRAPPED_KEY_SIZE) {
+            throw std::invalid_argument("output size mismatch");
+        }
+        seal(require(wrapping_key).material.span(), require(key).material.span(), view(aad, aad_length),
+             view(output, output_length));
+    });
+}
+
+kk_status kk_key_unwrap(const kk_key* wrapping_key, const uint8_t* wrapped, size_t wrapped_length,
+                        const uint8_t* aad, size_t aad_length, kk_key** key) {
+    return guarded([&] {
+        if (key == nullptr || wrapped_length != KK_WRAPPED_KEY_SIZE) {
+            throw std::invalid_argument("invalid wrapped key");
+        }
+        *key = nullptr;
+        SecureBuffer material(crypto::key_size);
+        open(require(wrapping_key).material.span(), view(wrapped, wrapped_length), view(aad, aad_length),
+             material.span());
+        *key = adopt(std::move(material));
+    });
+}
+
+kk_status kk_key_protect_for_user(const kk_key* key, uint8_t** blob, size_t* blob_length) {
+    return guarded([&] {
+        if (blob == nullptr || blob_length == nullptr) {
+            throw std::invalid_argument("null output");
+        }
+        const auto protected_key = crypto::protect_for_user(require(key).material.span());
+        *blob = new uint8_t[protected_key.size()];
+        std::copy(protected_key.begin(), protected_key.end(), *blob);
+        *blob_length = protected_key.size();
+    });
+}
+
+kk_status kk_key_unprotect_for_user(const uint8_t* blob, size_t blob_length, kk_key** key) {
+    return guarded([&] {
+        if (key == nullptr) {
+            throw std::invalid_argument("null output");
+        }
+        *key = nullptr;
+        *key = adopt(crypto::unprotect_for_user(view(blob, blob_length)));
+    });
+}
+
+void kk_blob_free(uint8_t* blob) {
+    delete[] blob;
+}
+
 kk_status kk_seal(const kk_key* key, const uint8_t* plaintext, size_t plaintext_length, const uint8_t* aad,
                   size_t aad_length, uint8_t* output, size_t output_length) {
     return guarded([&] {
-        if (output_length != plaintext_length + KK_SEAL_OVERHEAD) {
-            throw std::invalid_argument("output size mismatch");
-        }
-        const auto sealed = view(output, output_length);
-        const auto nonce = sealed.first<KK_NONCE_SIZE>();
-        crypto::random_bytes(nonce);
-        crypto::aes_gcm_encrypt(require(key).material.span(), nonce, view(aad, aad_length),
-                                view(plaintext, plaintext_length), sealed.subspan(KK_NONCE_SIZE, plaintext_length),
-                                sealed.last<KK_TAG_SIZE>());
+        seal(require(key).material.span(), view(plaintext, plaintext_length), view(aad, aad_length),
+             view(output, output_length));
     });
 }
 
 kk_status kk_open(const kk_key* key, const uint8_t* sealed, size_t sealed_length, const uint8_t* aad,
                   size_t aad_length, uint8_t* output, size_t output_length) {
     return guarded([&] {
-        if (sealed_length < KK_SEAL_OVERHEAD || output_length != sealed_length - KK_SEAL_OVERHEAD) {
-            throw std::invalid_argument("sealed size mismatch");
-        }
-        const auto input = view(sealed, sealed_length);
-        crypto::aes_gcm_decrypt(require(key).material.span(), input.first<KK_NONCE_SIZE>(), view(aad, aad_length),
-                                input.subspan(KK_NONCE_SIZE, output_length), input.last<KK_TAG_SIZE>(),
-                                view(output, output_length));
+        open(require(key).material.span(), view(sealed, sealed_length), view(aad, aad_length),
+             view(output, output_length));
     });
 }
 

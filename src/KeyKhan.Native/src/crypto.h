@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <span>
 #include <stdexcept>
+#include <vector>
 
 namespace keykhan::crypto {
 
@@ -49,5 +50,11 @@ std::size_t digest_size(HashAlgorithm algorithm);
 
 void hmac(HashAlgorithm algorithm, std::span<const std::uint8_t> key, std::span<const std::uint8_t> message,
           std::span<std::uint8_t> output);
+
+// Windows DPAPI scoped to the current user. The returned blob is opaque and may be stored on disk.
+std::vector<std::uint8_t> protect_for_user(std::span<const std::uint8_t> secret);
+
+// Throws AuthenticationError when the blob belongs to another user or machine, or was tampered with.
+SecureBuffer unprotect_for_user(std::span<const std::uint8_t> blob);
 
 }  // namespace keykhan::crypto

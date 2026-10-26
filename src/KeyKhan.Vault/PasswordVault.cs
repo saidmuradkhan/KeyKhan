@@ -7,58 +7,83 @@ using KeyKhan.Vault.Storage;
 namespace KeyKhan.Vault;
 
 /// <summary>
-/// An unlocked vault. Every mutation is encrypted and persisted immediately.
+/// An unlocked vault. Entries are encrypted with a random data key, which is stored wrapped
+/// under the master password and under a recovery key. Every mutation is persisted immediately.
 /// </summary>
 public sealed class PasswordVault : IDisposable
 {
     private readonly string _path;
     private readonly List<VaultEntry> _entries;
+    private readonly SecretKey _dataKey;
     private VaultHeader _header;
-    private byte[] _headerBytes;
-    private MasterKey _key;
 
-    private PasswordVault(string path, VaultHeader header, byte[] headerBytes, MasterKey key, List<VaultEntry> entries)
+    private PasswordVault(string path, VaultHeader header, SecretKey dataKey, List<VaultEntry> entries)
     {
         _path = path;
         _header = header;
-        _headerBytes = headerBytes;
-        _key = key;
+        _dataKey = dataKey;
         _entries = entries;
     }
 
     public IReadOnlyList<VaultEntry> Entries => _entries;
 
-    public static PasswordVault Create(string path, SecureString masterPassword) =>
-        Create(path, masterPassword, VaultHeader.DefaultIterations);
+    /// <param name="recoveryKey">Shown to the user once; the only way back in without the master password.</param>
+    public static PasswordVault Create(string path, SecureString masterPassword, out string recoveryKey) =>
+        Create(path, masterPassword, KeySlot.PasswordIterations, out recoveryKey);
 
-    internal static PasswordVault Create(string path, SecureString masterPassword, int iterations)
+    internal static PasswordVault Create(string path, SecureString masterPassword, int passwordIterations, out string recoveryKey)
     {
         if (File.Exists(path))
         {
             throw new IOException($"A vault already exists at '{path}'.");
         }
 
-        var header = VaultHeader.CreateNew(iterations);
-        var vault = new PasswordVault(path, header, header.ToBytes(), MasterKey.Derive(masterPassword, header.Salt, header.Iterations), []);
-        vault.Save();
-        return vault;
-    }
-
-    /// <exception cref="VaultAuthenticationException">Wrong master password or damaged file.</exception>
-    public static PasswordVault Open(string path, SecureString masterPassword)
-    {
-        var (header, headerBytes, payload) = VaultFile.Read(path);
-        var key = MasterKey.Derive(masterPassword, header.Salt, header.Iterations);
+        var dataKey = SecretKey.Generate();
         try
         {
-            return new PasswordVault(path, header, headerBytes, key, Decrypt(key, headerBytes, payload));
+            recoveryKey = RecoveryKey.Generate();
+            var header = new VaultHeader(
+            [
+                masterPassword.Use(chars => KeySlot.Create(KeySlotKind.Password, chars, dataKey, passwordIterations)),
+                CreateRecoverySlot(recoveryKey, dataKey),
+            ]);
+            var vault = new PasswordVault(path, header, dataKey, []);
+            vault.Save(header);
+            return vault;
         }
         catch
         {
-            key.Dispose();
+            dataKey.Dispose();
             throw;
         }
     }
+
+    /// <exception cref="VaultAuthenticationException">Wrong master password or damaged file.</exception>
+    public static PasswordVault Open(string path, SecureString masterPassword) =>
+        Open(path, header => masterPassword.Use(header.Slot(KeySlotKind.Password).Unlock));
+
+    /// <summary>Opens the vault with its recovery key and replaces the forgotten master password.</summary>
+    /// <exception cref="VaultAuthenticationException">The recovery key is wrong.</exception>
+    public static PasswordVault Recover(string path, string recoveryKey, SecureString newMasterPassword)
+    {
+        string symbols = RecoveryKey.Normalize(recoveryKey) ?? throw new VaultAuthenticationException();
+        var vault = Open(path, header => header.Slot(KeySlotKind.RecoveryKey).Unlock(symbols));
+        try
+        {
+            vault.SetMasterPassword(newMasterPassword);
+            return vault;
+        }
+        catch
+        {
+            vault.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>Opens the vault with a key previously returned by <see cref="CreateDeviceKey"/>.</summary>
+    /// <exception cref="VaultAuthenticationException">The key belongs to another account or another vault.</exception>
+    public static PasswordVault OpenWithDeviceKey(string path, byte[] deviceKey) =>
+        Open(path, _ => SecretKey.UnprotectForCurrentUser(deviceKey));
 
     public VaultEntry? Find(Guid id) => _entries.Find(e => e.Id == id);
 
@@ -82,30 +107,56 @@ public sealed class PasswordVault : IDisposable
     /// <exception cref="VaultAuthenticationException"><paramref name="currentPassword"/> is wrong.</exception>
     public void ChangeMasterPassword(SecureString currentPassword, SecureString newPassword)
     {
-        using (var check = MasterKey.Derive(currentPassword, _header.Salt, _header.Iterations))
-        {
-            var (_, storedHeader, payload) = VaultFile.Read(_path);
-            check.Open(payload, storedHeader);
-        }
+        var slot = _header.Slot(KeySlotKind.Password);
+        currentPassword.Use(slot.Unlock).Dispose();
+        SetMasterPassword(newPassword);
+    }
 
-        var header = VaultHeader.CreateNew(_header.Iterations);
-        byte[] headerBytes = header.ToBytes();
-        var key = MasterKey.Derive(newPassword, header.Salt, header.Iterations);
+    /// <summary>Replaces the recovery key; the previous one stops working.</summary>
+    public string RegenerateRecoveryKey()
+    {
+        string recoveryKey = RecoveryKey.Generate();
+        SaveHeader(_header.With(CreateRecoverySlot(recoveryKey, _dataKey)));
+        return recoveryKey;
+    }
+
+    /// <summary>
+    /// The data key encrypted with Windows DPAPI: it unlocks this vault without the master password,
+    /// but only for the current Windows account on this computer.
+    /// </summary>
+    public byte[] CreateDeviceKey() => _dataKey.ProtectForCurrentUser();
+
+    public void Dispose() => _dataKey.Dispose();
+
+    private static PasswordVault Open(string path, Func<VaultHeader, SecretKey> unlock)
+    {
+        var (header, headerBytes, payload) = VaultFile.Read(path);
+        var dataKey = unlock(header);
         try
         {
-            Save(headerBytes, key);
+            return new PasswordVault(path, header, dataKey, Decrypt(dataKey, headerBytes, payload));
         }
         catch
         {
-            key.Dispose();
+            dataKey.Dispose();
             throw;
         }
-
-        _key.Dispose();
-        (_header, _headerBytes, _key) = (header, headerBytes, key);
     }
 
-    public void Dispose() => _key.Dispose();
+    private static KeySlot CreateRecoverySlot(string recoveryKey, SecretKey dataKey) =>
+        KeySlot.Create(KeySlotKind.RecoveryKey, RecoveryKey.Normalize(recoveryKey)!, dataKey, KeySlot.RecoveryKeyIterations);
+
+    private void SetMasterPassword(SecureString password)
+    {
+        int iterations = _header.Slot(KeySlotKind.Password).Iterations;
+        SaveHeader(_header.With(password.Use(chars => KeySlot.Create(KeySlotKind.Password, chars, _dataKey, iterations))));
+    }
+
+    private void SaveHeader(VaultHeader header)
+    {
+        Save(header);
+        _header = header;
+    }
 
     /// <summary>Applies a change and persists it, rolling the in-memory state back if the write fails.</summary>
     private void Commit(Action<List<VaultEntry>> mutate)
@@ -114,7 +165,7 @@ public sealed class PasswordVault : IDisposable
         mutate(_entries);
         try
         {
-            Save();
+            Save(_header);
         }
         catch
         {
@@ -124,14 +175,13 @@ public sealed class PasswordVault : IDisposable
         }
     }
 
-    private void Save() => Save(_headerBytes, _key);
-
-    private void Save(byte[] headerBytes, MasterKey key)
+    private void Save(VaultHeader header)
     {
+        byte[] headerBytes = header.ToBytes();
         byte[] plaintext = JsonSerializer.SerializeToUtf8Bytes(new VaultPayload(_entries), VaultJsonContext.Default.VaultPayload);
         try
         {
-            VaultFile.Write(_path, headerBytes, key.Seal(plaintext, headerBytes));
+            VaultFile.Write(_path, headerBytes, _dataKey.Seal(plaintext, headerBytes));
         }
         finally
         {
@@ -139,9 +189,9 @@ public sealed class PasswordVault : IDisposable
         }
     }
 
-    private static List<VaultEntry> Decrypt(MasterKey key, byte[] headerBytes, byte[] payload)
+    private static List<VaultEntry> Decrypt(SecretKey dataKey, byte[] headerBytes, byte[] payload)
     {
-        byte[] plaintext = key.Open(payload, headerBytes);
+        byte[] plaintext = dataKey.Open(payload, headerBytes);
         try
         {
             return JsonSerializer.Deserialize(plaintext, VaultJsonContext.Default.VaultPayload)?.Entries

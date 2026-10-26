@@ -41,6 +41,28 @@ KK_API kk_status kk_derive_key(const wchar_t* password, size_t password_length,
 
 KK_API void kk_key_free(kk_key* key);
 
+/* Fresh random 256-bit key, used as the vault's data key. */
+KK_API kk_status kk_key_generate(kk_key** key);
+
+#define KK_WRAPPED_KEY_SIZE (32 + KK_SEAL_OVERHEAD)
+
+/* Encrypts `key` under `wrapping_key` (AES-256-GCM). output_length must be KK_WRAPPED_KEY_SIZE. */
+KK_API kk_status kk_key_wrap(const kk_key* wrapping_key, const kk_key* key,
+                             const uint8_t* aad, size_t aad_length,
+                             uint8_t* output, size_t output_length);
+
+/* Returns KK_AUTHENTICATION_FAILED when `wrapping_key` or `aad` does not match. */
+KK_API kk_status kk_key_unwrap(const kk_key* wrapping_key,
+                               const uint8_t* wrapped, size_t wrapped_length,
+                               const uint8_t* aad, size_t aad_length, kk_key** key);
+
+/* DPAPI: binds the key to the current Windows account. Release the blob with kk_blob_free. */
+KK_API kk_status kk_key_protect_for_user(const kk_key* key, uint8_t** blob, size_t* blob_length);
+
+KK_API kk_status kk_key_unprotect_for_user(const uint8_t* blob, size_t blob_length, kk_key** key);
+
+KK_API void kk_blob_free(uint8_t* blob);
+
 /* AES-256-GCM. Output layout: nonce || ciphertext || tag.
    output_length must equal plaintext_length + KK_SEAL_OVERHEAD. */
 KK_API kk_status kk_seal(const kk_key* key,

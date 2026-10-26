@@ -5,8 +5,8 @@ internal static class VaultFile
     public static (VaultHeader Header, byte[] HeaderBytes, byte[] Payload) Read(string path)
     {
         byte[] content = File.ReadAllBytes(path);
-        var header = VaultHeader.Parse(content);
-        return (header, content[..header.Size], content[header.Size..]);
+        var (header, size) = VaultHeader.Parse(content);
+        return (header, content[..size], content[size..]);
     }
 
     /// <summary>Writes to a sibling temp file first so a crash never leaves a half-written vault.</summary>

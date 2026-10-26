@@ -1,55 +1,54 @@
 using System.Buffers.Binary;
-using System.Security.Cryptography;
 
 namespace KeyKhan.Vault.Storage;
 
 /// <summary>
 /// Plaintext file header. Its bytes are bound to the payload as AES-GCM associated data,
-/// so tampering with the KDF parameters makes decryption fail.
+/// so tampering with any key slot makes decryption fail.
 /// </summary>
 /// <remarks>
-/// Layout (little-endian): magic "KKVT" | u16 version | u8 kdf | u32 iterations | u8 salt length | salt.
+/// Layout (little-endian): magic "KKVT" | u16 version | u8 slot count |
+/// per slot: u8 kind | u32 iterations | u8 salt length | salt | wrapped data key.
 /// </remarks>
 internal sealed class VaultHeader
 {
-    public const ushort CurrentVersion = 1;
-    public const int DefaultIterations = 600_000;
-
-    private const byte KdfPbkdf2Sha256 = 1;
-    private const int SaltSize = 32;
-    private const int FixedSize = 4 + 2 + 1 + 4 + 1;
+    public const ushort CurrentVersion = 2;
 
     private static ReadOnlySpan<byte> Magic => "KKVT"u8;
+    private static readonly int WrappedKeySize = Interop.NativeMethods.WrappedKeySize;
 
-    private VaultHeader(int iterations, byte[] salt)
-    {
-        Iterations = iterations;
-        Salt = salt;
-    }
+    public VaultHeader(IReadOnlyList<KeySlot> slots) => Slots = slots;
 
-    public int Iterations { get; }
-    public byte[] Salt { get; }
-    public int Size => FixedSize + Salt.Length;
+    public IReadOnlyList<KeySlot> Slots { get; }
 
-    public static VaultHeader CreateNew(int iterations = DefaultIterations) =>
-        new(iterations, RandomNumberGenerator.GetBytes(SaltSize));
+    public KeySlot Slot(KeySlotKind kind) =>
+        Slots.FirstOrDefault(s => s.Kind == kind) ?? throw new InvalidDataException($"The vault has no {kind} slot.");
+
+    public VaultHeader With(KeySlot slot) => new([.. Slots.Where(s => s.Kind != slot.Kind), slot]);
 
     public byte[] ToBytes()
     {
-        var bytes = new byte[Size];
-        var span = bytes.AsSpan();
-        Magic.CopyTo(span);
-        BinaryPrimitives.WriteUInt16LittleEndian(span[4..], CurrentVersion);
-        span[6] = KdfPbkdf2Sha256;
-        BinaryPrimitives.WriteInt32LittleEndian(span[7..], Iterations);
-        span[11] = (byte)Salt.Length;
-        Salt.CopyTo(span[FixedSize..]);
-        return bytes;
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream);
+        writer.Write(Magic);
+        writer.Write(CurrentVersion);
+        writer.Write((byte)Slots.Count);
+        foreach (var slot in Slots)
+        {
+            writer.Write((byte)slot.Kind);
+            writer.Write(slot.Iterations);
+            writer.Write((byte)slot.Salt.Length);
+            writer.Write(slot.Salt);
+            writer.Write(slot.WrappedKey);
+        }
+        writer.Flush();
+        return stream.ToArray();
     }
 
-    public static VaultHeader Parse(ReadOnlySpan<byte> data)
+    /// <returns>The header and the number of bytes it occupies.</returns>
+    public static (VaultHeader Header, int Size) Parse(ReadOnlySpan<byte> data)
     {
-        if (data.Length < FixedSize || !data[..4].SequenceEqual(Magic))
+        if (data.Length < 7 || !data[..4].SequenceEqual(Magic))
         {
             throw new InvalidDataException("The file is not a KeyKhan vault.");
         }
@@ -60,13 +59,34 @@ internal sealed class VaultHeader
             throw new InvalidDataException($"Vault format version {version} is not supported by this version of KeyKhan.");
         }
 
-        int iterations = BinaryPrimitives.ReadInt32LittleEndian(data[7..]);
-        int saltLength = data[11];
-        if (data[6] != KdfPbkdf2Sha256 || iterations <= 0 || saltLength < 16 || data.Length < FixedSize + saltLength)
+        int count = data[6];
+        int offset = 7;
+        var slots = new List<KeySlot>(count);
+        for (int i = 0; i < count; i++)
         {
-            throw new InvalidDataException("The vault header is corrupted.");
+            if (data.Length < offset + 6)
+            {
+                throw Corrupted();
+            }
+            var kind = (KeySlotKind)data[offset];
+            int iterations = BinaryPrimitives.ReadInt32LittleEndian(data[(offset + 1)..]);
+            int saltLength = data[offset + 5];
+            offset += 6;
+
+            if (iterations <= 0 || saltLength < 16 || data.Length < offset + saltLength + WrappedKeySize)
+            {
+                throw Corrupted();
+            }
+            byte[] salt = data.Slice(offset, saltLength).ToArray();
+            offset += saltLength;
+            byte[] wrapped = data.Slice(offset, WrappedKeySize).ToArray();
+            offset += WrappedKeySize;
+
+            slots.Add(new KeySlot(kind, iterations, salt, wrapped));
         }
 
-        return new VaultHeader(iterations, data.Slice(FixedSize, saltLength).ToArray());
+        return (new VaultHeader(slots), offset);
     }
+
+    private static InvalidDataException Corrupted() => new("The vault header is corrupted.");
 }

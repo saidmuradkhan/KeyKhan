@@ -38,6 +38,7 @@ internal static unsafe partial class NativeMethods
     private const string Library = "keykhan_native";
 
     public const int SealOverhead = 12 + 16;
+    public const int WrappedKeySize = 32 + SealOverhead;
 
     [LibraryImport(Library)]
     public static partial NativeStatus kk_derive_key(
@@ -45,6 +46,26 @@ internal static unsafe partial class NativeMethods
 
     [LibraryImport(Library)]
     public static partial void kk_key_free(nint key);
+
+    [LibraryImport(Library)]
+    public static partial NativeStatus kk_key_generate(out SafeKeyHandle key);
+
+    [LibraryImport(Library)]
+    public static partial NativeStatus kk_key_wrap(
+        SafeKeyHandle wrappingKey, SafeKeyHandle key, byte* aad, nuint aadLength, byte* output, nuint outputLength);
+
+    [LibraryImport(Library)]
+    public static partial NativeStatus kk_key_unwrap(
+        SafeKeyHandle wrappingKey, byte* wrapped, nuint wrappedLength, byte* aad, nuint aadLength, out SafeKeyHandle key);
+
+    [LibraryImport(Library)]
+    public static partial NativeStatus kk_key_protect_for_user(SafeKeyHandle key, out byte* blob, out nuint blobLength);
+
+    [LibraryImport(Library)]
+    public static partial NativeStatus kk_key_unprotect_for_user(byte* blob, nuint blobLength, out SafeKeyHandle key);
+
+    [LibraryImport(Library)]
+    public static partial void kk_blob_free(byte* blob);
 
     [LibraryImport(Library)]
     public static partial NativeStatus kk_seal(

@@ -1,5 +1,8 @@
 #include "crypto.h"
 
+#include <dpapi.h>
+
+#include <algorithm>
 #include <climits>
 #include <utility>
 
@@ -139,6 +142,30 @@ void hmac(HashAlgorithm algorithm, std::span<const std::uint8_t> key, std::span<
     check(BCryptHash(hmac_provider(algorithm), input(key), to_ulong(key.size()), input(message),
                      to_ulong(message.size()), output.data(), to_ulong(output.size())),
           "BCryptHash");
+}
+
+std::vector<std::uint8_t> protect_for_user(std::span<const std::uint8_t> secret) {
+    DATA_BLOB in{to_ulong(secret.size()), input(secret)};
+    DATA_BLOB out{};
+    if (!CryptProtectData(&in, L"KeyKhan", nullptr, nullptr, nullptr, CRYPTPROTECT_UI_FORBIDDEN, &out)) {
+        throw CryptoError("CryptProtectData", static_cast<NTSTATUS>(GetLastError()));
+    }
+    std::vector<std::uint8_t> blob(out.pbData, out.pbData + out.cbData);
+    LocalFree(out.pbData);
+    return blob;
+}
+
+SecureBuffer unprotect_for_user(std::span<const std::uint8_t> blob) {
+    DATA_BLOB in{to_ulong(blob.size()), input(blob)};
+    DATA_BLOB out{};
+    if (!CryptUnprotectData(&in, nullptr, nullptr, nullptr, nullptr, CRYPTPROTECT_UI_FORBIDDEN, &out)) {
+        throw AuthenticationError();
+    }
+    SecureBuffer secret(out.cbData);
+    std::copy_n(out.pbData, out.cbData, secret.data());
+    SecureZeroMemory(out.pbData, out.cbData);
+    LocalFree(out.pbData);
+    return secret;
 }
 
 }  // namespace keykhan::crypto
