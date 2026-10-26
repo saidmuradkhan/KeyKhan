@@ -17,12 +17,19 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Build and test
+      - name: Install Inno Setup
         shell: pwsh
-        run: ./build.ps1 -Version ($env:GITHUB_REF_NAME -replace '^v')
+        run: if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup --no-progress -y }
+
+      - name: Build, test and package
+        shell: pwsh
+        run: ./build.ps1 -Installer -Version ($env:GITHUB_REF_NAME -replace '^v')
 
       - name: Publish GitHub release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create $env:GITHUB_REF_NAME artifacts/publish/KeyKhan.exe install.ps1 --title "KeyKhan $env:GITHUB_REF_NAME" --generate-notes
+        run: >
+          gh release create $env:GITHUB_REF_NAME
+          artifacts/installer/KeyKhan-Setup.exe artifacts/publish/KeyKhan.exe
+          --title "KeyKhan $env:GITHUB_REF_NAME" --generate-notes
