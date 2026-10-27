@@ -1,0 +1,54 @@
+name: Bug report
+description: Something does not work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! **Never paste passwords, recovery keys or your vault file here.**
+        Security problems go through [private reporting](https://github.com/saidmuradkhan/KeyKhan/security/advisories/new) instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open quick access with Win + ~
+        2. Type ...
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: KeyKhan version
+      description: Settings → Updates shows it.
+      placeholder: "1.1.2"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run KeyKhan?
+      options:
+        - Installed with KeyKhan-Setup.exe
+        - Portable KeyKhan.exe
+        - Built from source
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: "Windows 11 24H2"
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots help, as long as they show no secrets.

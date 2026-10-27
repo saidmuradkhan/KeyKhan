@@ -1,8 +1,39 @@
-# KeyKhan
+<div align="center">
+  <img src="src/KeyKhan.App/Resources/logo.png" width="96" alt="KeyKhan logo">
+  <h1>KeyKhan</h1>
+  <p>
+    <b>A fast, offline password manager for Windows.</b><br>
+    Press <kbd>Win</kbd> + <kbd>~</kbd> anywhere, type a few letters, hit <kbd>Enter</kbd> — the password is on your clipboard.
+  </p>
+  <p>
+    <a href="https://github.com/saidmuradkhan/KeyKhan/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/saidmuradkhan/KeyKhan/ci.yml?branch=main&label=build" alt="Build"></a>
+    <a href="https://github.com/saidmuradkhan/KeyKhan/releases/latest"><img src="https://img.shields.io/github/v/release/saidmuradkhan/KeyKhan" alt="Latest release"></a>
+    <a href="https://github.com/saidmuradkhan/KeyKhan/releases"><img src="https://img.shields.io/github/downloads/saidmuradkhan/KeyKhan/total" alt="Downloads"></a>
+    <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4" alt="Windows 10 | 11">
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/saidmuradkhan/KeyKhan" alt="MIT license"></a>
+  </p>
+  <p>
+    <a href="https://github.com/saidmuradkhan/KeyKhan/releases/latest/download/KeyKhan-Setup.exe"><b>⬇ Download for Windows</b></a>
+    &nbsp;·&nbsp; <a href="#features">Features</a>
+    &nbsp;·&nbsp; <a href="#security-design">Security</a>
+    &nbsp;·&nbsp; <a href="CONTRIBUTING.md">Contributing</a>
+  </p>
+  <img src="docs/demo.gif" width="800" alt="Pressing Win + ~, typing 'git' and copying the GitHub password">
+</div>
 
-A fast, offline password manager for Windows. Press **Win + ~** anywhere, type a few letters, hit **Enter** — the password is on your clipboard and the window is gone.
+## Why KeyKhan?
 
-The cryptographic core is written in **C++** on top of Windows CNG; the app is **.NET 10 / WPF** with the Windows 11 Fluent theme.
+- **Built for the keyboard.** One global shortcut, a few letters, <kbd>Enter</kbd>. It can even auto-type the login into the app you were using.
+- **Yours, on your PC.** No account, no cloud, no subscription. The vault is a single encrypted file you can back up or sync however you like.
+- **Serious crypto, done by the OS.** AES-256-GCM and PBKDF2 from Windows CNG, called from a small C++ core that keeps keys out of the .NET heap.
+- **Native Windows 11 feel.** Fluent design, light and dark theme, tray icon, starts with Windows.
+
+| | KeyKhan | Typical cloud password manager |
+| --- | --- | --- |
+| Account required | No | Yes |
+| Your vault leaves your PC | Never | Synced to the provider |
+| Price | Free, MIT licensed | Often a subscription |
+| Works offline | Always | Depends |
 
 *KeyKhan* = **Key** + **Khan**, after its author Said Muradkhan.
 
