@@ -14,6 +14,10 @@ public sealed record VaultEntry
     public string Totp { get; init; } = "";
 
     public bool IsFavorite { get; init; }
+
+    /// <summary>Icon and colour keys chosen by the user; empty means automatic (initial letter, colour from the title).</summary>
+    public string Icon { get; init; } = "";
+    public string Color { get; init; } = "";
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
     public DateTimeOffset ModifiedAt { get; init; } = DateTimeOffset.UtcNow;
 }

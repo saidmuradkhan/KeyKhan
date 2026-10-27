@@ -20,6 +20,9 @@ public interface IDialogService
     /// <summary>Shows a newly created recovery key until the user confirms it is saved.</summary>
     void ShowRecoveryKey(string recoveryKey);
 
+    /// <returns>The chosen icon and colour, or <c>null</c> if the user cancelled.</returns>
+    AppearanceChoice? PickAppearance(string name, string icon, string color, bool isFolder);
+
     bool Confirm(string title, string message);
 
     /// <returns>The trimmed, non-empty text, or <c>null</c> if the user cancelled.</returns>

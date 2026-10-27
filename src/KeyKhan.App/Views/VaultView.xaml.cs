@@ -63,8 +63,17 @@ public partial class VaultView : UserControl
     {
         var button = (Button)sender;
         ViewModel.SelectedEntry = (VaultEntry)button.DataContext;
+        OpenMenu(button, "EntryMenu");
+    }
 
-        var menu = (ContextMenu)FindResource("EntryMenu");
+    private void OnFolderMoreClick(object sender, RoutedEventArgs e) => OpenMenu((Button)sender, "FolderMenu");
+
+    private void OnSortClick(object sender, RoutedEventArgs e) => OpenMenu((Button)sender, "SortMenu");
+
+    // The menus bind through the button's Tag (the view model) and DataContext (the clicked item).
+    private void OpenMenu(Button button, string key)
+    {
+        var menu = (ContextMenu)FindResource(key);
         // A context menu inherits its font from the placement target, which here uses the icon font.
         menu.FontFamily = FontFamily;
         menu.PlacementTarget = button;

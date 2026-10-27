@@ -17,6 +17,7 @@ public sealed class PasswordVault : IDisposable
 
     private readonly List<VaultEntry> _entries;
     private readonly List<string> _folders;
+    private readonly Dictionary<string, FolderStyle> _folderStyles;
     private readonly SecretKey _dataKey;
     private VaultHeader _header;
 
@@ -27,6 +28,7 @@ public sealed class PasswordVault : IDisposable
         _dataKey = dataKey;
         _entries = payload.Entries;
         _folders = payload.Folders ?? [];
+        _folderStyles = new Dictionary<string, FolderStyle>(payload.FolderStyles ?? [], FolderComparer);
     }
 
     public IReadOnlyList<VaultEntry> Entries => _entries;
@@ -129,6 +131,20 @@ public sealed class PasswordVault : IDisposable
         }
     }
 
+    public FolderStyle StyleOf(string folder) => _folderStyles.GetValueOrDefault(folder) ?? FolderStyle.Default;
+
+    public void SetFolderStyle(string folder, FolderStyle style) => Commit(_ =>
+    {
+        if (style == FolderStyle.Default)
+        {
+            _folderStyles.Remove(folder);
+        }
+        else
+        {
+            _folderStyles[folder] = style;
+        }
+    });
+
     /// <summary>Renames the folder and moves its entries; renaming onto an existing folder merges the two.</summary>
     public void RenameFolder(string name, string newName)
     {
@@ -142,6 +158,10 @@ public sealed class PasswordVault : IDisposable
         {
             MoveEntries(entries, name, target);
             _folders.RemoveAll(f => FolderComparer.Equals(f, name));
+            if (_folderStyles.Remove(name, out var style))
+            {
+                _folderStyles.TryAdd(target, style);
+            }
             if (!_folders.Contains(target, FolderComparer))
             {
                 _folders.Add(target);
@@ -154,6 +174,7 @@ public sealed class PasswordVault : IDisposable
     {
         MoveEntries(entries, name, "");
         _folders.RemoveAll(f => FolderComparer.Equals(f, name));
+        _folderStyles.Remove(name);
     });
 
     /// <exception cref="VaultAuthenticationException"><paramref name="currentPassword"/> is wrong.</exception>
@@ -248,6 +269,7 @@ public sealed class PasswordVault : IDisposable
     {
         var entries = _entries.ToList();
         var folders = _folders.ToList();
+        var styles = _folderStyles.ToList();
         mutate(_entries);
         try
         {
@@ -259,6 +281,11 @@ public sealed class PasswordVault : IDisposable
             _entries.AddRange(entries);
             _folders.Clear();
             _folders.AddRange(folders);
+            _folderStyles.Clear();
+            foreach (var (folder, style) in styles)
+            {
+                _folderStyles[folder] = style;
+            }
             throw;
         }
     }
@@ -266,7 +293,7 @@ public sealed class PasswordVault : IDisposable
     private void Save(VaultHeader header)
     {
         byte[] headerBytes = header.ToBytes();
-        byte[] plaintext = JsonSerializer.SerializeToUtf8Bytes(new VaultPayload(_entries, _folders), VaultJsonContext.Default.VaultPayload);
+        byte[] plaintext = JsonSerializer.SerializeToUtf8Bytes(new VaultPayload(_entries, _folders, _folderStyles), VaultJsonContext.Default.VaultPayload);
         try
         {
             VaultFile.Write(_path, headerBytes, _dataKey.Seal(plaintext, headerBytes));

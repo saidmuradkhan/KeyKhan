@@ -1,12 +1,17 @@
 <UserControl x:Class="KeyKhan.App.Views.VaultView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="clr-namespace:KeyKhan.App.Settings">
     <!-- Context menus live outside the visual tree; list items carry the view model in Tag to reach it. -->
     <UserControl.Resources>
         <ContextMenu x:Key="FolderMenu" x:Shared="False">
             <MenuItem Header="Rename…"
                       Command="{Binding PlacementTarget.Tag.RenameFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+            <MenuItem Header="Change icon…"
+                      Command="{Binding PlacementTarget.Tag.ChangeFolderIconCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+            <Separator />
             <MenuItem Header="Delete folder"
                       Command="{Binding PlacementTarget.Tag.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                       CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
@@ -18,6 +23,7 @@
             <MenuItem Header="Copy username" Command="{Binding CopyUsernameCommand}" />
             <Separator />
             <MenuItem Header="Edit…" Command="{Binding EditEntryCommand}" />
+            <MenuItem Header="Change icon…" Command="{Binding ChangeEntryIconCommand}" />
             <MenuItem Header="{Binding FavoriteMenuText}" Command="{Binding ToggleFavoriteCommand}" />
             <MenuItem Header="Add to folder" ItemsSource="{Binding FolderTargets}">
                 <MenuItem.ItemContainerStyle>
@@ -29,6 +35,16 @@
             </MenuItem>
             <Separator />
             <MenuItem Header="Delete" Command="{Binding DeleteEntryCommand}" />
+        </ContextMenu>
+
+        <ContextMenu x:Key="SortMenu" x:Shared="False"
+                     DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+            <MenuItem Header="Name" Command="{Binding SortByCommand}" CommandParameter="{x:Static settings:EntrySort.Name}"
+                      IsChecked="{Binding Sort, Mode=OneWay, Converter={StaticResource EqualsParameter}, ConverterParameter={x:Static settings:EntrySort.Name}}" />
+            <MenuItem Header="Recently modified" Command="{Binding SortByCommand}" CommandParameter="{x:Static settings:EntrySort.RecentlyModified}"
+                      IsChecked="{Binding Sort, Mode=OneWay, Converter={StaticResource EqualsParameter}, ConverterParameter={x:Static settings:EntrySort.RecentlyModified}}" />
+            <MenuItem Header="Recently added" Command="{Binding SortByCommand}" CommandParameter="{x:Static settings:EntrySort.RecentlyCreated}"
+                      IsChecked="{Binding Sort, Mode=OneWay, Converter={StaticResource EqualsParameter}, ConverterParameter={x:Static settings:EntrySort.RecentlyCreated}}" />
         </ContextMenu>
     </UserControl.Resources>
 
@@ -102,11 +118,39 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="{Binding Glyph}" />
+                            <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="{Binding Glyph}"
+                                       Foreground="{Binding Color, Converter={StaticResource ColorKeyBrush}}" />
                             <TextBlock Grid.Column="1" Margin="12,0,8,0" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
                             <TextBlock Grid.Column="2" Text="{Binding Count}" Style="{StaticResource CaptionTextBlockStyle}"
                                        VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                            <!-- Folders only: quick actions on hover or selection. -->
+                            <Button Grid.Column="3" Margin="4,-6,-6,-6" Padding="6,2" Content="&#xE712;" FontSize="14"
+                                    ToolTip="Folder actions" AutomationProperties.Name="Folder actions" Click="OnFolderMoreClick"
+                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding Kind}" Value="Folder" />
+                                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding Kind}" Value="Folder" />
+                                                    <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
                         </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -125,13 +169,17 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                          PreviewKeyDown="OnSearchKeyDown" />
                 <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"
                            Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="Search"
                            Visibility="{Binding Text, ElementName=SearchBox, Converter={StaticResource EmptyToVisible}}" />
-                <Button Grid.Column="1" Margin="8,0,0,0" Padding="10,8" ToolTip="New entry" AutomationProperties.Name="New entry"
+                <Button Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource IconButton}" Content="&#xE8CB;" FontSize="14"
+                        ToolTip="Sort" AutomationProperties.Name="Sort" Click="OnSortClick"
+                        Tag="{Binding}" />
+                <Button Grid.Column="2" Margin="6,0,0,0" Padding="10,8" ToolTip="New entry" AutomationProperties.Name="New entry"
                         Style="{StaticResource AccentButtonStyle}" Command="{Binding NewEntryCommand}">
                     <TextBlock Style="{StaticResource Icon}" FontSize="14" Text="&#xE710;" />
                 </Button>

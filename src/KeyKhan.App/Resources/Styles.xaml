@@ -12,6 +12,9 @@
     <conv:EmptyToCollapsedConverter x:Key="EmptyToVisible" Invert="True" />
     <conv:InitialConverter x:Key="Initial" />
     <conv:AvatarBrushConverter x:Key="AvatarBrush" />
+    <conv:IconGlyphConverter x:Key="IconGlyph" />
+    <conv:ColorKeyBrushConverter x:Key="ColorKeyBrush" />
+    <conv:EqualsParameterConverter x:Key="EqualsParameter" />
     <conv:StrengthBrushConverter x:Key="StrengthBrush" />
     <conv:StrengthTextConverter x:Key="StrengthText" />
     <conv:StrengthValueConverter x:Key="StrengthValue" />
@@ -87,12 +90,19 @@
     </Style>
 
     <!-- Rounded letter tile used as an entry icon. Bind DataContext to a VaultEntry. -->
+    <!-- The entry's icon if it has one, otherwise its initial. -->
     <DataTemplate x:Key="EntryAvatar">
         <Border Width="32" Height="32" CornerRadius="6"
-                Background="{Binding Title, Converter={StaticResource AvatarBrush}}">
-            <TextBlock Text="{Binding Title, Converter={StaticResource Initial}}"
-                       Foreground="White" FontWeight="SemiBold" FontSize="14"
-                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                Background="{Binding Converter={StaticResource AvatarBrush}}">
+            <Grid>
+                <TextBlock Text="{Binding Title, Converter={StaticResource Initial}}"
+                           Foreground="White" FontWeight="SemiBold" FontSize="14"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding Text, ElementName=Glyph, Converter={StaticResource EmptyToVisible}}" />
+                <TextBlock x:Name="Glyph" Text="{Binding Icon, Converter={StaticResource IconGlyph}}"
+                           FontFamily="{StaticResource IconFont}" Foreground="White" FontSize="16"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Grid>
         </Border>
     </DataTemplate>
 

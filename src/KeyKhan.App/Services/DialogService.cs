@@ -51,6 +51,12 @@ internal sealed class DialogService(
         return ShowDialog(window) ? window.Value : null;
     }
 
+    public AppearanceChoice? PickAppearance(string name, string icon, string color, bool isFolder)
+    {
+        var viewModel = new AppearancePickerViewModel(name, icon, color, isFolder);
+        return ShowDialog(new AppearancePickerWindow(viewModel)) ? viewModel.Result : null;
+    }
+
     public bool Confirm(string title, string message) =>
         Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
 

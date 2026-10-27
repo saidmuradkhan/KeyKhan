@@ -4,6 +4,7 @@ using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Windows.Input;
+using KeyKhan.App.Appearance;
 using KeyKhan.App.Services;
 using KeyKhan.App.Settings;
 using KeyKhan.Vault;
@@ -34,7 +35,7 @@ public sealed partial class VaultViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelection), nameof(LastModified), nameof(FavoriteMenuText))]
     [NotifyCanExecuteChangedFor(
-        nameof(EditEntryCommand), nameof(DeleteEntryCommand), nameof(ToggleFavoriteCommand),
+        nameof(EditEntryCommand), nameof(DeleteEntryCommand), nameof(ToggleFavoriteCommand), nameof(ChangeEntryIconCommand),
         nameof(CopyUsernameCommand), nameof(CopyPasswordCommand), nameof(CopyTotpCommand), nameof(OpenUrlCommand))]
     private VaultEntry? _selectedEntry;
 
@@ -76,6 +77,21 @@ public sealed partial class VaultViewModel : ObservableObject, IDisposable
     public ObservableCollection<MenuTarget> FolderTargets { get; } = [];
 
     public SettingsStore Settings { get; }
+
+    public EntrySort Sort
+    {
+        get => Settings.Current.EntrySort;
+        set
+        {
+            if (value == Sort)
+            {
+                return;
+            }
+            Settings.Update(s => s with { EntrySort = value });
+            OnPropertyChanged();
+            ApplyFilter();
+        }
+    }
 
     public bool HasSelection => SelectedEntry is not null;
     public string FavoriteMenuText => SelectedEntry?.IsFavorite == true ? "Remove from favorites" : "Add to favorites";
@@ -173,6 +189,35 @@ public sealed partial class VaultViewModel : ObservableObject, IDisposable
             SelectFolder(name);
         }
     }
+
+    [RelayCommand]
+    private void ChangeFolderIcon(NavigationItem item)
+    {
+        if (item.Folder is not { } folder)
+        {
+            return;
+        }
+
+        var style = _session.StyleOf(folder);
+        if (_dialogs.PickAppearance(folder, style.Icon, style.Color, isFolder: true) is { } choice)
+        {
+            _session.SetFolderStyle(folder, new FolderStyle(choice.Icon, choice.Color));
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void ChangeEntryIcon()
+    {
+        var entry = SelectedEntry!;
+        if (_dialogs.PickAppearance(entry.Title, entry.Icon, entry.Color, isFolder: false) is { } choice)
+        {
+            _session.Save(entry with { Icon = choice.Icon, Color = choice.Color, ModifiedAt = DateTimeOffset.UtcNow });
+            Select(entry.Id);
+        }
+    }
+
+    [RelayCommand]
+    private void SortBy(EntrySort sort) => Sort = sort;
 
     [RelayCommand]
     private void DeleteFolder(NavigationItem item)
@@ -327,7 +372,9 @@ public sealed partial class VaultViewModel : ObservableObject, IDisposable
         foreach (string folder in _session.Folders)
         {
             int count = entries.Count(e => FolderComparer.Equals(e.Folder, folder));
-            Navigation.Add(new NavigationItem(NavigationKind.Folder, folder, "\uE8B7", count, folder));
+            var style = _session.StyleOf(folder);
+            string glyph = Catalog.Icon(style.Icon)?.Glyph ?? Catalog.FolderGlyph;
+            Navigation.Add(new NavigationItem(NavigationKind.Folder, folder, glyph, count, folder, style.Color));
             FolderTargets.Add(new MenuTarget(folder, new RelayCommand(() => MoveSelectedEntry(folder))));
         }
         FolderTargets.Add(new MenuTarget("New folder…", new RelayCommand(() =>
@@ -360,8 +407,18 @@ public sealed partial class VaultViewModel : ObservableObject, IDisposable
             _ => _session.Entries,
         };
 
+        // A search ranks by relevance; otherwise the list follows the chosen sort order.
+        var entries = string.IsNullOrWhiteSpace(SearchText)
+            ? Sort switch
+            {
+                EntrySort.RecentlyModified => scope.OrderByDescending(e => e.ModifiedAt),
+                EntrySort.RecentlyCreated => scope.OrderByDescending(e => e.CreatedAt),
+                _ => EntrySearch.Search(scope, null),
+            }
+            : EntrySearch.Search(scope, SearchText);
+
         Entries.Clear();
-        foreach (var entry in EntrySearch.Search(scope, SearchText))
+        foreach (var entry in entries)
         {
             Entries.Add(entry);
         }

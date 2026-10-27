@@ -9,6 +9,13 @@ public enum AppTheme
     Dark,
 }
 
+public enum EntrySort
+{
+    Name,
+    RecentlyModified,
+    RecentlyCreated,
+}
+
 public sealed record AppSettings
 {
     public KeyCombo QuickAccessHotkey { get; init; } = KeyCombo.DefaultQuickAccess;
@@ -26,6 +33,7 @@ public sealed record AppSettings
     public bool CloseToTray { get; init; } = true;
     public bool CheckForUpdates { get; init; } = true;
     public AppTheme Theme { get; init; } = AppTheme.System;
+    public EntrySort EntrySort { get; init; } = EntrySort.Name;
     public string VaultPath { get; init; } = AppPaths.DefaultVaultFile;
     public PasswordGeneratorOptions Generator { get; init; } = new();
 

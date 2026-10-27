@@ -94,6 +94,10 @@ public sealed class VaultSession(string path, string deviceKeyPath) : IDisposabl
 
     public void DeleteFolder(string name) => Mutate(v => v.DeleteFolder(name));
 
+    public FolderStyle StyleOf(string folder) => _vault?.StyleOf(folder) ?? FolderStyle.Default;
+
+    public void SetFolderStyle(string folder, FolderStyle style) => Mutate(v => v.SetFolderStyle(folder, style));
+
     public Task ChangeMasterPasswordAsync(SecureString current, SecureString next)
     {
         var vault = RequireVault();

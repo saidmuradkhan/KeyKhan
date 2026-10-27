@@ -48,6 +48,7 @@
 - **Built-in authenticator** — store a 2FA setup key or `otpauth://` link and KeyKhan shows the current one-time code (TOTP, SHA-1/256/512).
 - **Password generator** — length, character sets, look-alike exclusion, strength meter.
 - **Folders** for projects, clients or anything else — create, rename and delete them in the sidebar, then drag an entry onto a folder (or onto Favorites), or use its **⋯** menu → **Add to folder**. Plus favorites, instant search and letter avatars.
+- **Make it yours** — pick from 75 icons and 12 colours for any entry or folder, sort the list by name or by what you changed or added last.
 - **Recovery key** — forgot the master password? The recovery key you saved when creating the vault lets you set a new one.
 - **Remember me on this computer** (optional) — skip the master password and unlock with your Windows sign-in. While it is on, Lock takes you to this setting, since the vault would unlock itself again.
 - **Auto-lock** after inactivity, when Windows locks and before sleep.

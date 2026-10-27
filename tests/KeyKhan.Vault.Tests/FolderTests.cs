@@ -51,6 +51,47 @@ public sealed class FolderTests : IDisposable
     }
 
     [Fact]
+    public void Folder_style_survives_reopening_and_follows_a_rename()
+    {
+        using (var vault = CreateVault())
+        {
+            vault.AddFolder("Work");
+            vault.SetFolderStyle("work", new FolderStyle("briefcase", "teal"));
+            vault.RenameFolder("Work", "Client A");
+        }
+
+        using var reopened = Reopen();
+        Assert.Equal(new FolderStyle("briefcase", "teal"), reopened.StyleOf("client a"));
+        Assert.Equal(FolderStyle.Default, reopened.StyleOf("Work"));
+    }
+
+    [Fact]
+    public void Deleting_a_folder_forgets_its_style()
+    {
+        using var vault = CreateVault();
+        vault.AddFolder("Work");
+        vault.SetFolderStyle("Work", new FolderStyle("star", ""));
+
+        vault.DeleteFolder("Work");
+        vault.AddFolder("Work");
+
+        Assert.Equal(FolderStyle.Default, vault.StyleOf("Work"));
+    }
+
+    [Fact]
+    public void Entry_icon_and_color_are_saved()
+    {
+        using (var vault = CreateVault())
+        {
+            vault.Upsert(new VaultEntry { Title = "Bank", Icon = "bank", Color = "green" });
+        }
+
+        using var reopened = Reopen();
+        var entry = Assert.Single(reopened.Entries);
+        Assert.Equal(("bank", "green"), (entry.Icon, entry.Color));
+    }
+
+    [Fact]
     public void Delete_keeps_entries_without_a_folder()
     {
         using var vault = CreateVault();

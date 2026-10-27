@@ -3,6 +3,8 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
+using KeyKhan.App.Appearance;
+using KeyKhan.Vault;
 using KeyKhan.Vault.Passwords;
 
 namespace KeyKhan.App.Converters;
@@ -48,32 +50,35 @@ public sealed class InitialConverter : OneWayConverter
         value is string { Length: > 0 } text ? char.ToUpper(text.TrimStart()[0], culture).ToString() : "?";
 }
 
-/// <summary>Stable colour per title so the same entry always gets the same tile.</summary>
+/// <summary>The tile colour of an entry: the one the user picked, otherwise a stable colour from its title.</summary>
 public sealed class AvatarBrushConverter : OneWayConverter
 {
-    private static readonly Brush[] Palette =
-    [
-        Frozen(0x2563EB), Frozen(0x7C3AED), Frozen(0xDB2777), Frozen(0xDC2626), Frozen(0xEA580C),
-        Frozen(0x16A34A), Frozen(0x0D9488), Frozen(0x0891B2), Frozen(0x4F46E5), Frozen(0x9333EA),
-    ];
-
-    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value switch
     {
-        string text = (value as string ?? "").ToUpperInvariant();
-        uint hash = 2166136261;
-        foreach (char c in text)
-        {
-            hash = (hash ^ c) * 16777619;
-        }
-        return Palette[hash % Palette.Length];
-    }
+        VaultEntry entry => Catalog.Color(entry.Color)?.Brush ?? Catalog.ColorFor(entry.Title),
+        string title => Catalog.ColorFor(title),
+        _ => Catalog.ColorFor(""),
+    };
+}
 
-    private static Brush Frozen(int rgb)
-    {
-        var brush = new SolidColorBrush(Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb));
-        brush.Freeze();
-        return brush;
-    }
+/// <summary>Icon key to its glyph; <c>null</c> for no or unknown icon, so the view can show the initial instead.</summary>
+public sealed class IconGlyphConverter : OneWayConverter
+{
+    public override object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        Catalog.Icon(value as string)?.Glyph;
+}
+
+/// <summary>Colour key to its brush; falls back to the primary text colour.</summary>
+public sealed class ColorKeyBrushConverter : OneWayConverter
+{
+    public override object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        Catalog.Color(value as string)?.Brush ?? Application.Current.TryFindResource("TextFillColorPrimaryBrush");
+}
+/// <summary>True when the value equals the converter parameter, e.g. to tick the current choice in a menu.</summary>
+public sealed class EqualsParameterConverter : OneWayConverter
+{
+    public override object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        Equals(value, parameter);
 }
 
 public sealed class StrengthBrushConverter : OneWayConverter
