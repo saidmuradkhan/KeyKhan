@@ -1,8 +1,8 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Runs the tests and produces a self-contained artifacts\publish\KeyKhan.exe
-    and, with -Installer, artifacts\installer\KeyKhan-Setup.exe.
+    Runs the tests and produces a self-contained artifacts\publish\PassIn.exe
+    and, with -Installer, artifacts\installer\PassIn-Setup.exe.
 .PARAMETER Version
     Version stamped into the executable and installer. Defaults to <Version> in Directory.Build.props.
 .PARAMETER Installer
@@ -49,14 +49,14 @@ if (-not $SkipTests) {
 }
 
 Invoke-Step "Publish $Version" {
-    dotnet publish src/KeyKhan.App -c Release --self-contained -p:DebugType=none "-p:Version=$Version" -o artifacts/publish
+    dotnet publish src/PassIn.App -c Release --self-contained -p:DebugType=none "-p:Version=$Version" -o artifacts/publish
 }
 
 if ($Installer) {
     $iscc = Find-InnoCompiler
     if (-not $iscc) { throw 'Inno Setup 6 not found. Install it with: winget install JRSoftware.InnoSetup' }
-    Invoke-Step 'Installer' { & $iscc /Qp "/DAppVersion=$Version" installer/KeyKhan.iss }
-    Write-Host "Installer: $(Resolve-Path artifacts/installer/KeyKhan-Setup.exe)" -ForegroundColor Green
+    Invoke-Step 'Installer' { & $iscc /Qp "/DAppVersion=$Version" installer/PassIn.iss }
+    Write-Host "Installer: $(Resolve-Path artifacts/installer/PassIn-Setup.exe)" -ForegroundColor Green
 }
 
-Write-Host "Portable:  $(Resolve-Path artifacts/publish/KeyKhan.exe)" -ForegroundColor Green
+Write-Host "Portable:  $(Resolve-Path artifacts/publish/PassIn.exe)" -ForegroundColor Green

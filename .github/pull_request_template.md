@@ -6,7 +6,7 @@
 
 - [ ] `.\build.ps1` passes
 - [ ] Tests added or updated for the changed behaviour
-- [ ] Tried in the app (with `KEYKHAN_HOME` pointing to a test folder)
+- [ ] Tried in the app (with `PASSIN_HOME` pointing to a test folder)
 
 ## Touches security-sensitive code?
 

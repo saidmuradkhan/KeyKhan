@@ -29,7 +29,9 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >
-          gh release create $env:GITHUB_REF_NAME
-          artifacts/installer/KeyKhan-Setup.exe artifacts/publish/KeyKhan.exe
-          --title "KeyKhan $env:GITHUB_REF_NAME" --generate-notes
+        # KeyKhan 1.2 and earlier look for KeyKhan-Setup.exe; the copy lets them update to PassIn in one click.
+        run: |
+          Copy-Item artifacts/installer/PassIn-Setup.exe artifacts/installer/KeyKhan-Setup.exe
+          gh release create $env:GITHUB_REF_NAME `
+            artifacts/installer/PassIn-Setup.exe artifacts/publish/PassIn.exe artifacts/installer/KeyKhan-Setup.exe `
+            --title "PassIn $env:GITHUB_REF_NAME" --generate-notes

@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for reporting! **Never paste passwords, recovery keys or your vault file here.**
-        Security problems go through [private reporting](https://github.com/saidmuradkhan/KeyKhan/security/advisories/new) instead.
+        Security problems go through [private reporting](https://github.com/saidmuradkhan/PassIn/security/advisories/new) instead.
   - type: textarea
     id: what-happened
     attributes:
@@ -27,7 +27,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: KeyKhan version
+      label: PassIn version
       description: Settings → Updates shows it.
       placeholder: "1.1.2"
     validations:
@@ -35,10 +35,10 @@ body:
   - type: dropdown
     id: install
     attributes:
-      label: How do you run KeyKhan?
+      label: How do you run PassIn?
       options:
-        - Installed with KeyKhan-Setup.exe
-        - Portable KeyKhan.exe
+        - Installed with PassIn-Setup.exe
+        - Portable PassIn.exe
         - Built from source
     validations:
       required: true

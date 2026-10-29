@@ -1,0 +1,55 @@
+<Window x:Class="PassIn.App.Views.GeneratorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Password generator"
+        Width="500" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False">
+    <StackPanel Margin="24">
+        <Border Style="{StaticResource Card}" Padding="16,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource MonoFont}" FontSize="18"
+                           TextWrapping="Wrap" Text="{Binding Password}" />
+                <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE72C;"
+                        Command="{Binding RegenerateCommand}" ToolTip="Generate again" />
+                <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE8C8;"
+                        Command="{Binding CopyCommand}" ToolTip="Copy" />
+            </Grid>
+        </Border>
+        <ContentControl Margin="0,8,0,0" Focusable="False"
+                        Content="{Binding Strength}" ContentTemplate="{StaticResource StrengthMeter}" />
+
+        <Grid Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="40" />
+            </Grid.ColumnDefinitions>
+            <TextBlock VerticalAlignment="Center" Text="Length" />
+            <Slider Grid.Column="1" Margin="16,0" VerticalAlignment="Center"
+                    Minimum="8" Maximum="64"
+                    IsSnapToTickEnabled="True" TickFrequency="1"
+                    Value="{Binding Length}" />
+            <TextBlock Grid.Column="2" VerticalAlignment="Center" TextAlignment="Right" Text="{Binding Length}" />
+        </Grid>
+
+        <CheckBox Margin="0,12,0,0" Content="Uppercase letters (A–Z)" IsChecked="{Binding Uppercase}" />
+        <CheckBox Margin="0,4,0,0" Content="Lowercase letters (a–z)" IsChecked="{Binding Lowercase}" />
+        <CheckBox Margin="0,4,0,0" Content="Digits (0–9)" IsChecked="{Binding Digits}" />
+        <CheckBox Margin="0,4,0,0" Content="Symbols (!@#$%…)" IsChecked="{Binding Symbols}" />
+        <CheckBox Margin="0,4,0,0" Content="Avoid look-alike characters (l, 1, O, 0)" IsChecked="{Binding ExcludeAmbiguous}" />
+
+        <TextBlock Margin="0,12,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Status}"
+                   Visibility="{Binding Status, Converter={StaticResource EmptyToCollapsed}}" />
+
+        <StackPanel Margin="0,20,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+            <Button MinWidth="96" Content="Close" IsCancel="True" />
+            <Button MinWidth="120" Margin="8,0,0,0" Content="Use password" IsDefault="True"
+                    Style="{StaticResource AccentButtonStyle}" Command="{Binding UseCommand}"
+                    Visibility="{Binding IsPickMode, Converter={StaticResource BoolToVisible}}" />
+        </StackPanel>
+    </StackPanel>
+</Window>

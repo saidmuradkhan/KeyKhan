@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.9.0.schema.json
+PackageIdentifier: SaidMuradkhan.PassIn
+PackageVersion: 1.1.2
+InstallerType: inno
+Scope: user
+InstallModes:
+  - interactive
+  - silent
+UpgradeBehavior: install
+ProductCode: '{B4E2C6A1-7F3D-4E58-9C21-6A8D0F4B3E71}_is1'
+ReleaseDate: 2026-10-26
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/saidmuradkhan/PassIn/releases/download/v1.1.2/PassIn-Setup.exe
+    InstallerSha256: C59CFA4623F875F8B657AB87C8880B9ED1A2225C4C7F5BB5DBB802F261195DAE
+ManifestType: installer
+ManifestVersion: 1.9.0
